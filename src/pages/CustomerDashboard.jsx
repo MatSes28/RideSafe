@@ -1,12 +1,33 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { GoogleMap, useJsApiLoader, Marker, DirectionsService, DirectionsRenderer } from '@react-google-maps/api';
+import React, { useState, useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import L from 'leaflet';
 import { Search, MapPin, Navigation2, Clock, User, Wallet, History, X, PlusCircle, Star, MessageSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import RoutingMachine from '../components/RoutingMachine';
 import { useAppStore } from '../store/useAppStore';
 import { supabase } from '../lib/supabase';
 import { Geolocation } from '@capacitor/geolocation';
 
-// Helper to get distance since we removed Leaflet
+// Fix for default leaflet icons not showing in Vite
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
+// Custom Icon for user
+const userIcon = new L.Icon({
+  iconUrl: 'https://cdn-icons-png.flaticon.com/512/149/149059.png', // Placeholder
+  iconSize: [35, 35],
+  className: 'leaflet-custom-icon-user'
+});
+
+const driverIcon = new L.Icon({
+  iconUrl: 'https://cdn-icons-png.flaticon.com/512/1048/1048314.png',
+  iconSize: [35, 35]
+});
+
 const getDistance = (lat1, lon1, lat2, lon2) => {
   const R = 6371; // km
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -19,23 +40,10 @@ const getDistance = (lat1, lon1, lat2, lon2) => {
 
 export default function CustomerDashboard() {
   const navigate = useNavigate();
-  const { isLoaded } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ""
-  });
-
   const [position, setPosition] = useState([15.7909, 120.9859]); // San Jose City
   const [booking, setBooking] = useState(false);
   const [searching, setSearching] = useState(false);
   const [routeInfo, setRouteInfo] = useState(null);
-  
-  const directionsCallback = useCallback((res) => {
-    if (res !== null) {
-      if (res.status === 'OK') {
-        setRouteInfo(res);
-      }
-    }
-  }, []);
   
   const currentUser = useAppStore(state => state.currentUser);
   const walletBalance = useAppStore(state => state.walletBalance);
@@ -83,12 +91,6 @@ export default function CustomerDashboard() {
     const amount = parseFloat(topUpAmount);
     if (isNaN(amount) || amount <= 0) return;
     
-    // PayMongo Integration Check
-    const paymongoKey = import.meta.env.VITE_PAYMONGO_SECRET_KEY;
-    if (paymongoKey) {
-      alert("Redirecting to PayMongo Secure Checkout (Test Mode)...");
-    }
-
     // Update local and remote wallet
     if (currentUser) {
       const { data } = await supabase.from('profiles').select('wallet_balance').eq('id', currentUser.id).single();
@@ -259,44 +261,30 @@ export default function CustomerDashboard() {
 
       {/* Full Screen Map */}
       <div style={{ flex: 1, position: 'relative' }}>
-        {isLoaded ? (
-          <GoogleMap
-            mapContainerStyle={{ height: '100%', width: '100%' }}
-            center={{ lat: position[0], lng: position[1] }}
-            zoom={13}
-            options={{ disableDefaultUI: true }}
-          >
-            <Marker position={{ lat: position[0], lng: position[1] }} />
-            
-            {driverPosition && booking && (
-              <Marker 
-                position={{ lat: driverPosition[0], lng: driverPosition[1] }} 
-                icon={{ url: 'https://cdn-icons-png.flaticon.com/512/1048/1048314.png', scaledSize: new window.google.maps.Size(35, 35) }} 
-              />
-            )}
+        <MapContainer center={position} zoom={13} style={{ height: '100%', width: '100%' }} zoomControl={false}>
+          <TileLayer
+            url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+            attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+          />
+          <Marker position={position}>
+            <Popup>You are here</Popup>
+          </Marker>
 
-            {booking && !routeInfo && (
-              <DirectionsService
-                options={{
-                  destination: { lat: 15.7226, lng: 120.9028 }, // Munoz
-                  origin: { lat: position[0], lng: position[1] },
-                  travelMode: 'DRIVING'
-                }}
-                callback={directionsCallback}
-              />
-            )}
-
-            {routeInfo && (
-              <DirectionsRenderer
-                options={{ directions: routeInfo }}
-              />
-            )}
-          </GoogleMap>
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gray-900 text-white">
-            <div className="loading-spinner"></div>
-          </div>
-        )}
+          {driverPosition && booking && (
+            <Marker position={driverPosition} icon={driverIcon}>
+              <Popup>Your Driver</Popup>
+            </Marker>
+          )}
+          
+          {/* Simulated Real Map Routing */}
+          {booking && (
+             <RoutingMachine 
+               start={position} 
+               end={[15.7226, 120.9028]} 
+               onRouteFound={(route) => setRouteInfo(route)} 
+             />
+          )}
+        </MapContainer>
       </div>
 
       {/* Bottom Action Card */}
@@ -344,13 +332,13 @@ export default function CustomerDashboard() {
               <div className="flex items-center gap-2">
                 <Clock size={18} className="text-primary" />
                 <span style={{ fontSize: '0.9rem' }}>
-                  {routeInfo?.routes?.[0]?.legs?.[0]?.duration?.text || 'Calculating...'}
+                  {routeInfo ? Math.round(routeInfo.summary.totalTime / 60) + ' mins' : 'Calculating...'}
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <Navigation2 size={18} className="text-secondary" />
                 <span style={{ fontSize: '0.9rem' }}>
-                  {routeInfo?.routes?.[0]?.legs?.[0]?.distance?.text || 'Fastest Route'}
+                  {routeInfo ? (routeInfo.summary.totalDistance / 1000).toFixed(1) + ' km' : 'Fastest Route'}
                 </span>
               </div>
             </div>

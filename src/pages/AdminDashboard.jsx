@@ -1,14 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { CheckCircle, XCircle, Users, Activity, DollarSign, Map as MapIcon, ClipboardCheck } from 'lucide-react';
-import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import L from 'leaflet';
+
+// Fix for default leaflet icons not showing in Vite
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
+const driverIcon = new L.Icon({
+  iconUrl: 'https://cdn-icons-png.flaticon.com/512/1048/1048314.png',
+  iconSize: [35, 35]
+});
 
 export default function AdminDashboard() {
-  const { isLoaded } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ""
-  });
-  
   const [activeTab, setActiveTab] = useState('approvals'); // approvals, analytics, map
   const [drivers, setDrivers] = useState([]);
   
@@ -177,24 +186,17 @@ export default function AdminDashboard() {
 
         {activeTab === 'map' && (
           <div className="absolute inset-0 animate-fade-in">
-            {isLoaded ? (
-              <GoogleMap
-                mapContainerStyle={{ height: '100%', width: '100%' }}
-                center={{ lat: 15.7909, lng: 120.9859 }}
-                zoom={13}
-                options={{ disableDefaultUI: true }}
-              >
-                {Object.keys(liveDrivers).map(rideId => (
-                  <Marker 
-                    key={rideId} 
-                    position={{ lat: liveDrivers[rideId][0], lng: liveDrivers[rideId][1] }} 
-                    icon={{ url: 'https://cdn-icons-png.flaticon.com/512/1048/1048314.png', scaledSize: new window.google.maps.Size(35, 35) }}
-                  />
-                ))}
-              </GoogleMap>
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-gray-900 text-white">Loading Map...</div>
-            )}
+            <MapContainer center={[15.7909, 120.9859]} zoom={13} style={{ height: '100%', width: '100%' }} zoomControl={false}>
+              <TileLayer
+                url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+                attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+              />
+              {Object.keys(liveDrivers).map(rideId => (
+                <Marker key={rideId} position={liveDrivers[rideId]} icon={driverIcon}>
+                  <Popup>Driver (Ride: {rideId.substring(0,6)})</Popup>
+                </Marker>
+              ))}
+            </MapContainer>
           </div>
         )}
 

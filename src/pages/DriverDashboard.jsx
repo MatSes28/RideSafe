@@ -1,30 +1,26 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { GoogleMap, useJsApiLoader, Marker, DirectionsService, DirectionsRenderer } from '@react-google-maps/api';
+import React, { useState, useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import L from 'leaflet';
 import { Power, MapPin, AlertCircle, Navigation, User, Wallet, History, X, MessageSquare } from 'lucide-react';
+import RoutingMachine from '../components/RoutingMachine';
 import { useAppStore } from '../store/useAppStore';
 import { supabase } from '../lib/supabase';
 import { Geolocation } from '@capacitor/geolocation';
 import { LocalNotifications } from '@capacitor/local-notifications';
 
-export default function DriverDashboard() {
-  const { isLoaded } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ""
-  });
+// Fix for default leaflet icons not showing in Vite
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
 
+export default function DriverDashboard() {
   const [position, setPosition] = useState([15.7909, 120.9859]); // San Jose City
   const [online, setOnline] = useState(false);
   const [incomingRequest, setIncomingRequest] = useState(false);
   const [accepted, setAccepted] = useState(false);
-  const [routeInfo, setRouteInfo] = useState(null);
-
-  const directionsCallback = useCallback((res) => {
-    if (res !== null) {
-      if (res.status === 'OK') {
-        setRouteInfo(res);
-      }
-    }
-  }, []);
   const currentUser = useAppStore(state => state.currentUser);
   const walletBalance = useAppStore(state => state.walletBalance);
   const isApproved = useAppStore(state => state.isApproved);
@@ -298,46 +294,33 @@ export default function DriverDashboard() {
 
       {/* Full Screen Map */}
       <div style={{ flex: 1, position: 'relative' }}>
-        {isLoaded ? (
-          <GoogleMap
-            mapContainerStyle={{ height: '100%', width: '100%' }}
-            center={{ lat: position[0], lng: position[1] }}
-            zoom={14}
-            options={{ disableDefaultUI: true }}
-          >
-            <Marker position={{ lat: position[0], lng: position[1] }} />
+        <MapContainer center={position} zoom={13} style={{ height: '100%', width: '100%' }} zoomControl={false}>
+          <TileLayer
+            url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+            attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+          />
+          <Marker position={position}>
+            <Popup>You are here</Popup>
+          </Marker>
 
-            {/* Draw actual route if accepted */}
-            {accepted && !routeInfo && (
-              <DirectionsService
-                options={{
-                  destination: { lat: 15.7226, lng: 120.9028 }, // Munoz
-                  origin: { lat: position[0], lng: position[1] },
-                  travelMode: 'DRIVING'
-                }}
-                callback={directionsCallback}
-              />
-            )}
+          {/* Draw actual route if accepted */}
+          {accepted && (
+             <RoutingMachine 
+               start={position} 
+               end={[15.7226, 120.9028]} 
+             />
+          )}
 
-            {routeInfo && (
-              <DirectionsRenderer
-                options={{ directions: routeInfo }}
-              />
-            )}
-
-            {/* Traffic Checkpoint Demo */}
-            {online && (
-               <Marker 
-                 position={{ lat: 15.7800, lng: 120.9800 }} 
-                 icon={{ url: 'https://cdn-icons-png.flaticon.com/512/1201/1201509.png', scaledSize: new window.google.maps.Size(25, 25) }}
-               />
-            )}
-          </GoogleMap>
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gray-900 text-white">
-            <div className="loading-spinner"></div>
-          </div>
-        )}
+          {/* Traffic Checkpoint Demo */}
+          {online && (
+             <Marker position={[15.7800, 120.9800]} icon={new L.Icon({
+                iconUrl: 'https://cdn-icons-png.flaticon.com/512/1201/1201509.png',
+                iconSize: [25, 25]
+             })}>
+                <Popup>Heavy Traffic / Checkpoint</Popup>
+             </Marker>
+          )}
+        </MapContainer>
       </div>
 
       {/* Incoming Request Modal */}
