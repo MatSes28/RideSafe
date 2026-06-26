@@ -7,6 +7,8 @@ import DriverRegister from './pages/DriverRegister';
 import CustomerDashboard from './pages/CustomerDashboard';
 import DriverDashboard from './pages/DriverDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import Terms from './pages/Terms';
+import Privacy from './pages/Privacy';
 
 import { useAppStore } from './store/useAppStore';
 
@@ -23,6 +25,8 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register-customer" element={<CustomerRegister />} />
           <Route path="/register-driver" element={<DriverRegister />} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/privacy" element={<Privacy />} />
           <Route path="/customer-dash" element={<CustomerDashboard />} />
           <Route path="/driver-dash" element={<DriverDashboard />} />
           <Route path="/admin" element={<AdminDashboard />} />

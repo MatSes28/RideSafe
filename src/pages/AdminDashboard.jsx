@@ -115,19 +115,46 @@ export default function AdminDashboard() {
             ) : (
               <div className="flex flex-col gap-4">
                 {drivers.map(driver => (
-                  <div key={driver.id} className="glass-card flex justify-between items-center p-4">
-                    <div>
-                      <h4 className="mb-1">Driver ID:</h4>
-                      <p className="text-muted" style={{ fontSize: '0.8rem' }}>{driver.id}</p>
+                  <div key={driver.id} className="glass-card flex flex-col p-4 mb-4">
+                    <div className="flex justify-between items-center mb-4">
+                      <div>
+                        <h4 className="mb-1">Driver ID:</h4>
+                        <p className="text-muted" style={{ fontSize: '0.8rem' }}>{driver.id}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button className="btn btn-outline" style={{ color: 'var(--danger)', borderColor: 'var(--danger)', padding: '0.5rem' }}>
+                          <XCircle size={18} /> Reject
+                        </button>
+                        <button className="btn btn-primary" style={{ padding: '0.5rem' }} onClick={() => handleApprove(driver.id)}>
+                          <CheckCircle size={18} /> Approve
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex gap-2">
-                      <button className="btn btn-outline" style={{ color: 'var(--danger)', borderColor: 'var(--danger)', padding: '0.5rem' }}>
-                        <XCircle size={18} /> Reject
-                      </button>
-                      <button className="btn btn-primary" style={{ padding: '0.5rem' }} onClick={() => handleApprove(driver.id)}>
-                        <CheckCircle size={18} /> Approve
-                      </button>
+                    
+                    {/* Document Display */}
+                    <div className="flex gap-4 border-t pt-4" style={{ borderColor: 'var(--border)' }}>
+                      <div className="flex-1">
+                        <p className="text-sm font-bold mb-2">Driver's License</p>
+                        {driver.license_url ? (
+                          <a href={driver.license_url} target="_blank" rel="noreferrer">
+                            <img src={driver.license_url} alt="License" className="w-full h-32 object-cover rounded-lg border border-gray-600" />
+                          </a>
+                        ) : (
+                          <div className="w-full h-32 bg-gray-800 rounded-lg flex items-center justify-center text-muted">No License</div>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-bold mb-2">Valid ID / ORCR</p>
+                        {driver.vehicle_registration_url ? (
+                          <a href={driver.vehicle_registration_url} target="_blank" rel="noreferrer">
+                            <img src={driver.vehicle_registration_url} alt="ID/ORCR" className="w-full h-32 object-cover rounded-lg border border-gray-600" />
+                          </a>
+                        ) : (
+                          <div className="w-full h-32 bg-gray-800 rounded-lg flex items-center justify-center text-muted">No ID/ORCR</div>
+                        )}
+                      </div>
                     </div>
+
                   </div>
                 ))}
               </div>

@@ -10,6 +10,7 @@ export default function DriverRegister() {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [acceptLegal, setAcceptLegal] = useState(false);
 
   const [formData, setFormData] = useState({ 
     name: '', phone: '', password: '', 
@@ -30,6 +31,10 @@ export default function DriverRegister() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!acceptLegal) {
+      alert("You must agree to the Terms of Service and Privacy Policy.");
+      return;
+    }
     if (!licenseFile || !idFile) {
       alert("Please upload both ID and Driver's License.");
       return;
@@ -65,15 +70,22 @@ export default function DriverRegister() {
     // Upload ID & License
     const idFileName = `${userId}/driver_id_${Date.now()}`;
     const licenseFileName = `${userId}/license_${Date.now()}`;
-    await supabase.storage.from('verifications').upload(idFileName, idFile);
-    await supabase.storage.from('verifications').upload(licenseFileName, licenseFile);
+    
+    // Upload to documents bucket instead of verifications
+    await supabase.storage.from('documents').upload(idFileName, idFile);
+    await supabase.storage.from('documents').upload(licenseFileName, licenseFile);
+
+    const { data: idUrl } = supabase.storage.from('documents').getPublicUrl(idFileName);
+    const { data: licenseUrl } = supabase.storage.from('documents').getPublicUrl(licenseFileName);
 
     // Create profile (unapproved initially)
     await supabase.from('profiles').insert({
       id: userId,
       role: 'driver',
       is_approved: false,
-      wallet_balance: 0
+      wallet_balance: 0,
+      license_url: licenseUrl.publicUrl,
+      vehicle_registration_url: idUrl.publicUrl
     });
 
     setLoading(false);
@@ -161,6 +173,19 @@ export default function DriverRegister() {
                 {licenseFile ? licenseFile.name : 'Tap to upload License'}
               </span>
               <input type="file" accept="image/*" className="form-input" onChange={handleLicenseChange} />
+            </label>
+          </div>
+
+          <div className="flex items-start gap-2 mt-4 mb-4">
+            <input 
+              type="checkbox" 
+              id="legal" 
+              checked={acceptLegal} 
+              onChange={(e) => setAcceptLegal(e.target.checked)} 
+              className="mt-1"
+            />
+            <label htmlFor="legal" className="text-sm text-muted">
+              I agree to the <a href="/terms" className="text-primary hover:underline">Terms of Service</a> and <a href="/privacy" className="text-primary hover:underline">Privacy Policy</a>
             </label>
           </div>
 

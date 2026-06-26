@@ -9,6 +9,7 @@ export default function CustomerRegister() {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [acceptLegal, setAcceptLegal] = useState(false);
 
   const [formData, setFormData] = useState({ name: '', phone: '', password: '' });
 
@@ -22,6 +23,10 @@ export default function CustomerRegister() {
     e.preventDefault();
     if (!idFile) {
       alert("Please upload a valid ID.");
+      return;
+    }
+    if (!acceptLegal) {
+      alert("You must agree to the Terms of Service and Privacy Policy.");
       return;
     }
     
@@ -123,6 +128,19 @@ export default function CustomerRegister() {
                 PNG, JPG up to 5MB
               </span>
               <input type="file" accept="image/*" className="form-input" onChange={handleFileChange} />
+            </label>
+          </div>
+
+          <div className="flex items-start gap-2 mb-4">
+            <input 
+              type="checkbox" 
+              id="legal" 
+              checked={acceptLegal} 
+              onChange={(e) => setAcceptLegal(e.target.checked)} 
+              className="mt-1"
+            />
+            <label htmlFor="legal" className="text-sm text-muted">
+              I agree to the <a href="/terms" className="text-primary hover:underline">Terms of Service</a> and <a href="/privacy" className="text-primary hover:underline">Privacy Policy</a>
             </label>
           </div>
 
