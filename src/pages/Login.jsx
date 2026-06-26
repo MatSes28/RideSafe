@@ -2,15 +2,39 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogIn, ArrowLeft } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
+import { supabase } from '../lib/supabase';
 
 export default function Login() {
   const navigate = useNavigate();
 
   const login = useAppStore((state) => state.login);
 
-  const handleLogin = (e, role) => {
+  const [phone, setPhone] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+  const [errorMsg, setErrorMsg] = React.useState('');
+
+  const handleLogin = async (e) => {
     e.preventDefault();
-    login({ phone: 'user-logged-in' }, role);
+    setLoading(true);
+    setErrorMsg('');
+
+    const email = `${phone.replace(/[^0-9]/g, '')}@ridesafe.com`;
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    setLoading(false);
+
+    if (error) {
+      setErrorMsg(error.message);
+      return;
+    }
+
+    // Role comes from user_metadata
+    const role = data.user?.user_metadata?.role;
     if (role === 'driver') {
       navigate('/driver-dash');
     } else {
@@ -27,28 +51,27 @@ export default function Login() {
       <div className="mb-4">
         <h2>Welcome Back</h2>
         <p>Sign in to continue riding or driving.</p>
+        {errorMsg && <p className="text-danger mt-2">{errorMsg}</p>}
       </div>
 
       <div className="glass-card">
-        <form>
+        <form onSubmit={handleLogin}>
           <div className="form-group">
             <label className="form-label">Phone Number</label>
-            <input type="tel" className="form-input" placeholder="+63 9XX XXX XXXX" required />
+            <input type="tel" className="form-input" placeholder="09XX XXX XXXX" required 
+                   value={phone} onChange={e => setPhone(e.target.value)} />
           </div>
           
           <div className="form-group">
             <label className="form-label">Password</label>
-            <input type="password" className="form-input" placeholder="••••••••" required />
+            <input type="password" className="form-input" placeholder="••••••••" required 
+                   value={password} onChange={e => setPassword(e.target.value)} />
           </div>
 
-          <div className="flex gap-2 mt-4">
-            <button type="submit" className="btn btn-primary" style={{ flex: 1, padding: '0.8rem' }} onClick={(e) => handleLogin(e, 'customer')}>
-              Login as Customer
-            </button>
-            <button type="submit" className="btn btn-outline" style={{ flex: 1, padding: '0.8rem' }} onClick={(e) => handleLogin(e, 'driver')}>
-              Login as Driver
-            </button>
-          </div>
+          <button type="submit" className="btn btn-primary btn-block mt-4" disabled={loading}>
+            <LogIn size={20} />
+            {loading ? "Signing in..." : "Sign In"}
+          </button>
         </form>
 
         <div className="mt-4 text-center">

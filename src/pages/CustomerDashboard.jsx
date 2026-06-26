@@ -5,6 +5,7 @@ import { Search, MapPin, Navigation2, Clock, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import RoutingMachine from '../components/RoutingMachine';
 import { useAppStore } from '../store/useAppStore';
+import { supabase } from '../lib/supabase';
 
 // Fix for default leaflet icons not showing in Vite
 delete L.Icon.Default.prototype._getIconUrl;
@@ -29,6 +30,29 @@ export default function CustomerDashboard() {
   const [routeInfo, setRouteInfo] = useState(null);
   
   const currentUser = useAppStore(state => state.currentUser);
+  
+  const [channel, setChannel] = useState(null);
+
+  useEffect(() => {
+    // Setup Supabase Realtime Channel
+    const ridesChannel = supabase.channel('rides', {
+      config: { broadcast: { self: true } }
+    });
+
+    ridesChannel.on('broadcast', { event: 'ride_accepted' }, (payload) => {
+      // Driver accepted the ride!
+      if (payload.payload.customerId === currentUser?.id) {
+        setSearching(false);
+        setBooking(true);
+      }
+    }).subscribe();
+
+    setChannel(ridesChannel);
+
+    return () => {
+      supabase.removeChannel(ridesChannel);
+    };
+  }, [currentUser]);
 
   // Simulate real-time GPS update
   useEffect(() => {
@@ -41,12 +65,31 @@ export default function CustomerDashboard() {
     }
   }, []);
 
-  const handleBook = () => {
+  const handleFindDriver = () => {
     setSearching(true);
+    
+    // Broadcast ride request to all online drivers
+    if (channel) {
+      channel.send({
+        type: 'broadcast',
+        event: 'ride_request',
+        payload: {
+          customerId: currentUser?.id,
+          customerName: currentUser?.user_metadata?.full_name || 'Customer',
+          pickup: position,
+          dropoff: [15.7226, 120.9028] // Munoz
+        }
+      });
+    }
+
+    // Optional timeout if no driver accepts
     setTimeout(() => {
-      setSearching(false);
-      setBooking(true);
-    }, 3000); // Simulate finding driver
+      if (!booking) {
+        // Fallback simulation
+        // setSearching(false);
+        // setBooking(true);
+      }
+    }, 15000);
   };
 
   return (
@@ -108,18 +151,18 @@ export default function CustomerDashboard() {
                <span className="text-muted text-sm" style={{ fontSize: '0.8rem' }}>GPS Active</span>
             </div>
             
-            <button className="btn btn-primary btn-block mt-2" onClick={handleBook} style={{ padding: '1rem', fontSize: '1.2rem' }}>
+            <button className="btn btn-primary btn-block mt-2" onClick={handleFindDriver} style={{ padding: '1rem', fontSize: '1.2rem' }}>
               Find a Driver
             </button>
           </div>
         )}
 
         {searching && (
-          <div className="flex flex-col items-center gap-4 animate-fade-in">
-            <div className="spinner" style={{ width: '40px', height: '40px', border: '4px solid var(--border)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-            <style>{`@keyframes spin { 100% { transform: rotate(360deg); } }`}</style>
-            <h3>Searching nearby drivers...</h3>
-            <p className="text-muted text-center" style={{ fontSize: '0.9rem' }}>Checking San Jose traffic & fast routes.</p>
+          <div className="glass-card animate-slide-up" style={{ padding: '1rem', textAlign: 'center' }}>
+            <h3 className="mb-2">Finding a driver...</h3>
+            <p className="text-muted mb-4" style={{ fontSize: '0.9rem' }}>Broadcasting to nearby drivers in San Jose.</p>
+            <div className="loading-spinner mb-4" style={{ margin: '0 auto' }}></div>
+            <button className="btn btn-outline btn-block text-danger" style={{ borderColor: 'var(--danger)' }} onClick={() => setSearching(false)}>Cancel</button>
           </div>
         )}
 

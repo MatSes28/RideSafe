@@ -7,7 +7,13 @@ import DriverRegister from './pages/DriverRegister';
 import CustomerDashboard from './pages/CustomerDashboard';
 import DriverDashboard from './pages/DriverDashboard';
 
+import { useAppStore } from './store/useAppStore';
+
 function App() {
+  React.useEffect(() => {
+    useAppStore.getState().initialize();
+  }, []);
+
   return (
     <BrowserRouter>
       <div className="app-container">

@@ -1,11 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, UploadCloud, UserPlus, CheckCircle } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 export default function CustomerRegister() {
   const navigate = useNavigate();
   const [idFile, setIdFile] = useState(null);
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  const [formData, setFormData] = useState({ name: '', phone: '', password: '' });
 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
@@ -13,12 +18,38 @@ export default function CustomerRegister() {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!idFile) {
       alert("Please upload a valid ID.");
       return;
     }
+    
+    setLoading(true);
+    setErrorMsg("");
+
+    // Use fake email for phone auth simulation
+    const email = `${formData.phone.replace(/[^0-9]/g, '')}@ridesafe.com`;
+
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password: formData.password,
+      options: {
+        data: {
+          role: 'customer',
+          full_name: formData.name,
+          phone: formData.phone
+        }
+      }
+    });
+
+    setLoading(false);
+
+    if (error) {
+      setErrorMsg(error.message);
+      return;
+    }
+
     setSubmitted(true);
     setTimeout(() => {
       navigate('/customer-dash');
@@ -44,23 +75,27 @@ export default function CustomerRegister() {
       <div className="mb-4">
         <h2>Customer Registration</h2>
         <p>Join RideSafe today. Fast, safe, and reliable.</p>
+        {errorMsg && <p className="text-danger mt-2">{errorMsg}</p>}
       </div>
 
       <div className="glass-card">
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label className="form-label">Full Name</label>
-            <input type="text" className="form-input" placeholder="Juan Dela Cruz" required />
+            <input type="text" className="form-input" placeholder="Juan Dela Cruz" required 
+                   value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
           </div>
 
           <div className="form-group">
             <label className="form-label">Phone Number</label>
-            <input type="tel" className="form-input" placeholder="+63 9XX XXX XXXX" required />
+            <input type="tel" className="form-input" placeholder="09XX XXX XXXX" required 
+                   value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
           </div>
 
           <div className="form-group">
             <label className="form-label">Password</label>
-            <input type="password" className="form-input" placeholder="Create a strong password" required />
+            <input type="password" className="form-input" placeholder="Create a strong password" required 
+                   value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
           </div>
 
           <div className="form-group">
@@ -77,9 +112,9 @@ export default function CustomerRegister() {
             </label>
           </div>
 
-          <button type="submit" className="btn btn-primary btn-block mt-4">
+          <button type="submit" className="btn btn-primary btn-block mt-4" disabled={loading}>
             <UserPlus size={20} />
-            Register Account
+            {loading ? "Registering..." : "Register Account"}
           </button>
         </form>
       </div>

@@ -4,6 +4,7 @@ import L from 'leaflet';
 import { Power, MapPin, AlertCircle, Navigation, User } from 'lucide-react';
 import RoutingMachine from '../components/RoutingMachine';
 import { useAppStore } from '../store/useAppStore';
+import { supabase } from '../lib/supabase';
 
 // Fix for default leaflet icons not showing in Vite
 delete L.Icon.Default.prototype._getIconUrl;
@@ -19,6 +20,8 @@ export default function DriverDashboard() {
   const [incomingRequest, setIncomingRequest] = useState(false);
   const [accepted, setAccepted] = useState(false);
   const currentUser = useAppStore(state => state.currentUser);
+  const [channel, setChannel] = useState(null);
+  const [currentRequest, setCurrentRequest] = useState(null);
 
   // Simulate real-time GPS update
   useEffect(() => {
@@ -31,22 +34,40 @@ export default function DriverDashboard() {
     }
   }, []);
 
-  // Simulate incoming ride request when online
   useEffect(() => {
-    let timer;
-    if (online && !accepted) {
-      timer = setTimeout(() => {
+    const ridesChannel = supabase.channel('rides', {
+      config: { broadcast: { self: true } }
+    });
+
+    ridesChannel.on('broadcast', { event: 'ride_request' }, (payload) => {
+      // Show incoming request if online and not busy
+      if (online && !accepted) {
         setIncomingRequest(true);
-      }, 5000); // 5 seconds after going online
-    } else {
-      setIncomingRequest(false);
-    }
-    return () => clearTimeout(timer);
+        setCurrentRequest(payload.payload); // contains customerId, customerName, etc.
+      }
+    }).subscribe();
+
+    setChannel(ridesChannel);
+
+    return () => supabase.removeChannel(ridesChannel);
   }, [online, accepted]);
 
   const handleAccept = () => {
     setIncomingRequest(false);
     setAccepted(true);
+    
+    // Broadcast back to the customer
+    if (channel && currentRequest) {
+      channel.send({
+        type: 'broadcast',
+        event: 'ride_accepted',
+        payload: {
+          driverId: currentUser?.id,
+          driverName: currentUser?.user_metadata?.full_name || 'Driver',
+          customerId: currentRequest.customerId
+        }
+      });
+    }
   };
 
   const handleComplete = () => {
@@ -125,16 +146,16 @@ export default function DriverDashboard() {
           <div className="flex flex-col gap-2 mb-4">
             <div className="flex items-center gap-2">
               <MapPin size={16} className="text-secondary" />
-              <span>Pickup: San Jose Public Market</span>
+              <span>Pickup: {currentRequest?.customerName || 'Customer'} (Current Location)</span>
             </div>
             <div className="flex items-center gap-2">
               <MapPin size={16} className="text-danger" />
-              <span>Dropoff: CLSU Main Gate, Munoz</span>
+              <span>Dropoff: Munoz Market</span>
             </div>
             <p className="text-muted mt-2" style={{ fontSize: '0.9rem' }}>Estimated Fare: ₱ 120.00</p>
           </div>
           <div className="flex gap-2">
-            <button className="btn btn-outline" style={{ flex: 1 }} onClick={() => setIncomingRequest(false)}>Decline</button>
+            <button className="btn btn-outline" style={{ flex: 1 }} onClick={() => { setIncomingRequest(false); setCurrentRequest(null); }}>Decline</button>
             <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleAccept}>Accept</button>
           </div>
         </div>

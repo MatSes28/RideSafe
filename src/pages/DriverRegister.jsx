@@ -1,12 +1,20 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, UploadCloud, UserPlus, CheckCircle, Truck } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 export default function DriverRegister() {
   const navigate = useNavigate();
   const [idFile, setIdFile] = useState(null);
   const [licenseFile, setLicenseFile] = useState(null);
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  const [formData, setFormData] = useState({ 
+    name: '', phone: '', password: '', 
+    vehicleType: 'motorcycle', plateNumber: '' 
+  });
 
   const handleIdChange = (e) => {
     if (e.target.files && e.target.files[0]) {
@@ -20,16 +28,43 @@ export default function DriverRegister() {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!idFile || !licenseFile) {
-      alert("Please upload both a valid ID and your Driver's License.");
+    if (!licenseFile || !idFile) {
+      alert("Please upload both ID and Driver's License.");
       return;
     }
+
+    setLoading(true);
+    setErrorMsg("");
+
+    const email = `${formData.phone.replace(/[^0-9]/g, '')}@ridesafe.com`;
+
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password: formData.password,
+      options: {
+        data: {
+          role: 'driver',
+          full_name: formData.name,
+          phone: formData.phone,
+          vehicle_type: formData.vehicleType,
+          plate_number: formData.plateNumber
+        }
+      }
+    });
+
+    setLoading(false);
+
+    if (error) {
+      setErrorMsg(error.message);
+      return;
+    }
+
     setSubmitted(true);
     setTimeout(() => {
       navigate('/driver-dash');
-    }, 2000);
+    }, 1500);
   };
 
   if (submitted) {
@@ -52,34 +87,42 @@ export default function DriverRegister() {
       <div className="mb-4">
         <h2>Drive with RideSafe</h2>
         <p>Earn on your own schedule. Sign up below.</p>
+        {errorMsg && <p className="text-danger mt-2">{errorMsg}</p>}
       </div>
 
       <div className="glass-card">
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label className="form-label">Full Name</label>
-            <input type="text" className="form-input" placeholder="Juan Dela Cruz" required />
+            <input type="text" className="form-input" placeholder="Juan Dela Cruz" required 
+                   value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
           </div>
 
           <div className="form-group">
             <label className="form-label">Phone Number</label>
-            <input type="tel" className="form-input" placeholder="+63 9XX XXX XXXX" required />
+            <input type="tel" className="form-input" placeholder="09XX XXX XXXX" required 
+                   value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Password</label>
+            <input type="password" className="form-input" placeholder="Create a strong password" required 
+                   value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
           </div>
 
           <div className="form-group">
             <label className="form-label">Vehicle Type</label>
-            <select className="form-input" required style={{ appearance: 'none' }}>
-              <option value="" disabled selected>Select vehicle type</option>
+            <select className="form-input" required value={formData.vehicleType} onChange={e => setFormData({...formData, vehicleType: e.target.value})}>
               <option value="motorcycle">Motorcycle</option>
-              <option value="sedan">Car / Sedan</option>
-              <option value="suv">SUV</option>
-              <option value="tricycle">Tricycle</option>
+              <option value="sedan">Sedan (4-seater)</option>
+              <option value="suv">SUV (6-seater)</option>
             </select>
           </div>
 
           <div className="form-group">
             <label className="form-label">Plate Number</label>
-            <input type="text" className="form-input" placeholder="ABC 1234" required />
+            <input type="text" className="form-input" placeholder="ABC 1234" required 
+                   value={formData.plateNumber} onChange={e => setFormData({...formData, plateNumber: e.target.value})} />
           </div>
 
           <div className="form-group">
@@ -104,9 +147,13 @@ export default function DriverRegister() {
             </label>
           </div>
 
-          <button type="submit" className="btn btn-primary btn-block mt-4">
-            <UserPlus size={20} />
-            Submit Application
+          <button type="submit" className="btn btn-primary btn-block mt-4" disabled={loading}>
+            {loading ? "Registering..." : (
+              <>
+                <UserPlus size={20} />
+                Submit Application
+              </>
+            )}
           </button>
         </form>
       </div>
