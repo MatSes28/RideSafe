@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
-import { Search, MapPin, Navigation2, Clock, User, Wallet, History, X } from 'lucide-react';
+import { Search, MapPin, Navigation2, Clock, User, Wallet, History, X, PlusCircle, Star, MessageSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import RoutingMachine from '../components/RoutingMachine';
 import { useAppStore } from '../store/useAppStore';
@@ -47,12 +47,81 @@ export default function CustomerDashboard() {
   const [showHistory, setShowHistory] = useState(false);
   const [rideHistory, setRideHistory] = useState([]);
 
+  // GCash Top-Up State
+  const [showTopUp, setShowTopUp] = useState(false);
+  const [topUpAmount, setTopUpAmount] = useState('');
+
+  // Review State
+  const [showReview, setShowReview] = useState(false);
+  const [rating, setRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [completedRideId, setCompletedRideId] = useState(null);
+  const [completedDriverId, setCompletedDriverId] = useState(null);
+
+  const handleTopUp = async () => {
+    const amount = parseFloat(topUpAmount);
+    if (isNaN(amount) || amount <= 0) return;
+    
+    // Update local and remote wallet
+    if (currentUser) {
+      const { data } = await supabase.from('profiles').select('wallet_balance').eq('id', currentUser.id).single();
+      if (data) {
+        await supabase.from('profiles').update({ wallet_balance: data.wallet_balance + amount }).eq('id', currentUser.id);
+        useAppStore.getState().initialize(); // refresh balance
+      }
+    }
+    setShowTopUp(false);
+    setTopUpAmount('');
+  };
+
+  const submitReview = async () => {
+    if (completedRideId && completedDriverId && currentUser) {
+      await supabase.from('reviews').insert({
+        ride_id: completedRideId,
+        driver_id: completedDriverId,
+        customer_id: currentUser.id,
+        rating,
+        comment: reviewComment
+      });
+    }
+    setShowReview(false);
+  };
+
   const fetchHistory = async () => {
     if (currentUser) {
       const { data } = await supabase.from('rides').select('*').eq('customer_id', currentUser.id).order('created_at', { ascending: false });
       setRideHistory(data || []);
       setShowHistory(true);
     }
+  };
+
+  // Chat State
+  const [showChat, setShowChat] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [activeRideId, setActiveRideId] = useState(null);
+
+  useEffect(() => {
+    if (activeRideId) {
+      supabase.from('messages').select('*').eq('ride_id', activeRideId).order('created_at', {ascending: true}).then(({data}) => {
+        if (data) setChatMessages(data);
+      });
+      const chatSub = supabase.channel(`chat_${activeRideId}`)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `ride_id=eq.${activeRideId}` }, (payload) => {
+           setChatMessages(prev => [...prev, payload.new]);
+        }).subscribe();
+      return () => supabase.removeChannel(chatSub);
+    }
+  }, [activeRideId]);
+
+  const sendMessage = async () => {
+    if (!newMessage.trim() || !activeRideId) return;
+    await supabase.from('messages').insert({
+      ride_id: activeRideId,
+      sender_id: currentUser.id,
+      text: newMessage
+    });
+    setNewMessage('');
   };
 
   useEffect(() => {
@@ -66,6 +135,15 @@ export default function CustomerDashboard() {
       if (payload.payload.customerId === currentUser?.id) {
         setSearching(false);
         setBooking(true);
+        // Save driver info for later review
+        setCompletedDriverId(payload.payload.driverId);
+        setActiveRideId(payload.payload.rideId); // New! Assume driver sends a generated rideId
+      }
+    }).on('broadcast', { event: 'ride_completed' }, (payload) => {
+      if (payload.payload.customerId === currentUser?.id) {
+        setBooking(false);
+        setCompletedRideId(payload.payload.rideId);
+        setShowReview(true);
       }
     }).subscribe();
 
@@ -132,6 +210,7 @@ export default function CustomerDashboard() {
             {currentUser && <div className="text-primary text-sm font-bold flex items-center gap-1"><User size={16}/> Hi, Rider!</div>}
             <div className="flex items-center gap-4">
               <div className="text-secondary text-sm font-bold flex items-center gap-1 cursor-pointer" onClick={fetchHistory}><History size={16}/> History</div>
+              <div className="text-secondary text-sm font-bold flex items-center gap-1 cursor-pointer" onClick={() => setShowTopUp(true)}><PlusCircle size={16}/> Top-Up</div>
               <div className="text-secondary text-sm font-bold flex items-center gap-1"><Wallet size={16}/> ₱ {walletBalance.toFixed(2)}</div>
             </div>
           </div>
@@ -228,9 +307,91 @@ export default function CustomerDashboard() {
             <button className="btn btn-outline btn-block mt-4" onClick={() => setBooking(false)} style={{ borderColor: 'var(--danger)', color: 'var(--danger)' }}>
               Cancel Ride
             </button>
+            <button className="btn btn-primary btn-block mt-2" onClick={() => setShowChat(true)} style={{ background: 'var(--secondary)' }}>
+              <MessageSquare size={18} /> Chat with Driver
+            </button>
           </div>
         )}
       </div>
+
+      {/* Top Up Modal */}
+      {showTopUp && (
+        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="glass-card w-11/12 max-w-sm" style={{ padding: '2rem' }}>
+            <h3 className="mb-4 text-center" style={{ color: '#0052FE' }}>GCash Top-Up</h3>
+            <p className="text-sm text-muted text-center mb-4">Simulate adding funds to your wallet.</p>
+            <input 
+              type="number" 
+              className="input mb-4" 
+              placeholder="Amount (₱)" 
+              value={topUpAmount}
+              onChange={e => setTopUpAmount(e.target.value)}
+            />
+            <div className="flex gap-2">
+              <button className="btn btn-outline flex-1" onClick={() => setShowTopUp(false)}>Cancel</button>
+              <button className="btn btn-primary flex-1" style={{ background: '#0052FE' }} onClick={handleTopUp}>Confirm</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Review Modal */}
+      {showReview && (
+        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="glass-card w-11/12 max-w-sm" style={{ padding: '2rem', textAlign: 'center' }}>
+            <h3 className="mb-2">Ride Completed!</h3>
+            <p className="text-sm text-muted mb-4">Please rate your driver.</p>
+            <div className="flex justify-center gap-2 mb-4">
+              {[1, 2, 3, 4, 5].map(star => (
+                <Star 
+                  key={star} 
+                  size={32} 
+                  onClick={() => setRating(star)} 
+                  fill={star <= rating ? 'gold' : 'transparent'} 
+                  color={star <= rating ? 'gold' : 'gray'} 
+                  className="cursor-pointer"
+                />
+              ))}
+            </div>
+            <textarea 
+              className="input mb-4" 
+              placeholder="Leave a comment..." 
+              value={reviewComment}
+              onChange={e => setReviewComment(e.target.value)}
+              rows="3"
+            />
+            <button className="btn btn-primary btn-block" onClick={submitReview}>Submit Review</button>
+          </div>
+        </div>
+      )}
+
+      {/* Chat Modal */}
+      {showChat && (
+        <div style={{ position: 'absolute', inset: 0, background: 'var(--background)', zIndex: 3000, display: 'flex', flexDirection: 'col' }} className="flex flex-col h-full w-full">
+          <div className="p-4 flex items-center justify-between shadow-sm" style={{ background: 'var(--surface-color)' }}>
+            <h3 className="m-0 flex items-center gap-2"><MessageSquare size={20} /> Chat</h3>
+            <X onClick={() => setShowChat(false)} className="cursor-pointer" />
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2">
+            {chatMessages.map(msg => (
+              <div key={msg.id} className={`p-3 rounded-lg max-w-[80%] ${msg.sender_id === currentUser?.id ? 'self-end bg-primary text-black' : 'self-start bg-surface-color'}`}>
+                {msg.text}
+              </div>
+            ))}
+          </div>
+          <div className="p-4 flex gap-2" style={{ background: 'var(--surface-color)' }}>
+            <input 
+              type="text" 
+              className="input flex-1" 
+              placeholder="Type a message..." 
+              value={newMessage}
+              onChange={e => setNewMessage(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && sendMessage()}
+            />
+            <button className="btn btn-primary" onClick={sendMessage}>Send</button>
+          </div>
+        </div>
+      )}
 
       {/* History Modal */}
       {showHistory && (

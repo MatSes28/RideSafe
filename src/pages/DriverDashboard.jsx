@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
-import { Power, MapPin, AlertCircle, Navigation, User, Wallet, History, X } from 'lucide-react';
+import { Power, MapPin, AlertCircle, Navigation, User, Wallet, History, X, MessageSquare } from 'lucide-react';
 import RoutingMachine from '../components/RoutingMachine';
 import { useAppStore } from '../store/useAppStore';
 import { supabase } from '../lib/supabase';
@@ -29,6 +29,35 @@ export default function DriverDashboard() {
   const [showHistory, setShowHistory] = useState(false);
   const [rideHistory, setRideHistory] = useState([]);
   const [todaysEarnings, setTodaysEarnings] = useState(0);
+
+  // Chat State
+  const [showChat, setShowChat] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [activeRideId, setActiveRideId] = useState(null);
+
+  useEffect(() => {
+    if (activeRideId) {
+      supabase.from('messages').select('*').eq('ride_id', activeRideId).order('created_at', {ascending: true}).then(({data}) => {
+        if (data) setChatMessages(data);
+      });
+      const chatSub = supabase.channel(`chat_${activeRideId}`)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `ride_id=eq.${activeRideId}` }, (payload) => {
+           setChatMessages(prev => [...prev, payload.new]);
+        }).subscribe();
+      return () => supabase.removeChannel(chatSub);
+    }
+  }, [activeRideId]);
+
+  const sendMessage = async () => {
+    if (!newMessage.trim() || !activeRideId) return;
+    await supabase.from('messages').insert({
+      ride_id: activeRideId,
+      sender_id: currentUser.id,
+      text: newMessage
+    });
+    setNewMessage('');
+  };
 
   const fetchHistory = async () => {
     if (currentUser) {
@@ -88,37 +117,49 @@ export default function DriverDashboard() {
     return () => supabase.removeChannel(ridesChannel);
   }, [online, accepted]);
 
-  const handleAccept = () => {
+  const handleAccept = async () => {
     setIncomingRequest(false);
     setAccepted(true);
     
-    // Broadcast back to the customer
-    if (channel && currentRequest) {
-      channel.send({
-        type: 'broadcast',
-        event: 'ride_accepted',
-        payload: {
-          driverId: currentUser?.id,
-          driverName: currentUser?.user_metadata?.full_name || 'Driver',
-          customerId: currentRequest.customerId
-        }
-      });
-    }
-  };
-
-  const handleComplete = async () => {
     if (currentRequest) {
-      const fareAmount = currentRequest.fare;
-      
-      // 1. Insert Ride
-      await supabase.from('rides').insert({
+      // 1. Insert Ride as active to get the ID
+      const { data } = await supabase.from('rides').insert({
         customer_id: currentRequest.customerId,
         driver_id: currentUser?.id,
         pickup: "San Jose",
         dropoff: "Munoz",
-        fare: fareAmount,
-        status: 'completed'
-      });
+        fare: currentRequest.fare,
+        status: 'active'
+      }).select('id').single();
+      
+      let newRideId = null;
+      if (data) {
+        newRideId = data.id;
+        setActiveRideId(newRideId);
+      }
+      
+      // Broadcast back to the customer
+      if (channel) {
+        channel.send({
+          type: 'broadcast',
+          event: 'ride_accepted',
+          payload: {
+            driverId: currentUser?.id,
+            driverName: currentUser?.user_metadata?.full_name || 'Driver',
+            customerId: currentRequest.customerId,
+            rideId: newRideId
+          }
+        });
+      }
+    }
+  };
+
+  const handleComplete = async () => {
+    if (currentRequest && activeRideId) {
+      const fareAmount = currentRequest.fare;
+      
+      // 1. Update Ride status to completed
+      await supabase.from('rides').update({ status: 'completed' }).eq('id', activeRideId);
 
       // 2. Fetch Customer Profile & Deduct
       const { data: custData } = await supabase.from('profiles').select('wallet_balance').eq('id', currentRequest.customerId).single();
@@ -134,13 +175,24 @@ export default function DriverDashboard() {
 
       // Reload earnings
       setTodaysEarnings(prev => prev + fareAmount);
-      
-      // Update local wallet balance state indirectly or just refresh
       useAppStore.getState().initialize(); 
+
+      // Broadcast ride completed
+      if (channel) {
+        channel.send({
+          type: 'broadcast',
+          event: 'ride_completed',
+          payload: {
+            customerId: currentRequest.customerId,
+            rideId: activeRideId
+          }
+        });
+      }
     }
     setAccepted(false);
     setIncomingRequest(false);
     setCurrentRequest(null);
+    setActiveRideId(null);
   };
 
   return (
@@ -249,13 +301,46 @@ export default function DriverDashboard() {
           <h3 className="mb-2 text-secondary">Navigating to Pickup</h3>
           <p className="text-muted mb-4" style={{ fontSize: '0.9rem' }}>Avoiding checkpoint traffic...</p>
           
-          <button className="btn btn-primary btn-block mb-2" style={{ background: 'var(--secondary)' }}>
-            <Navigation size={18} /> Open in Maps
-          </button>
+          <div className="flex gap-2 mb-2">
+            <button className="btn btn-primary flex-1" style={{ background: 'var(--secondary)' }}>
+              <Navigation size={18} /> Maps
+            </button>
+            <button className="btn btn-outline flex-1" onClick={() => setShowChat(true)} style={{ color: 'var(--secondary)', borderColor: 'var(--secondary)' }}>
+              <MessageSquare size={18} /> Chat
+            </button>
+          </div>
           
           <button className="btn btn-outline btn-block text-primary" style={{ borderColor: 'var(--primary)', color: 'var(--primary)' }} onClick={handleComplete}>
             Complete Ride
           </button>
+        </div>
+      )}
+
+      {/* Chat Modal */}
+      {showChat && (
+        <div style={{ position: 'absolute', inset: 0, background: 'var(--background)', zIndex: 3000, display: 'flex', flexDirection: 'col' }} className="flex flex-col h-full w-full">
+          <div className="p-4 flex items-center justify-between shadow-sm" style={{ background: 'var(--surface-color)' }}>
+            <h3 className="m-0 flex items-center gap-2"><MessageSquare size={20} /> Chat</h3>
+            <X onClick={() => setShowChat(false)} className="cursor-pointer" />
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2">
+            {chatMessages.map(msg => (
+              <div key={msg.id} className={`p-3 rounded-lg max-w-[80%] ${msg.sender_id === currentUser?.id ? 'self-end bg-primary text-black' : 'self-start bg-surface-color'}`}>
+                {msg.text}
+              </div>
+            ))}
+          </div>
+          <div className="p-4 flex gap-2" style={{ background: 'var(--surface-color)' }}>
+            <input 
+              type="text" 
+              className="input flex-1" 
+              placeholder="Type a message..." 
+              value={newMessage}
+              onChange={e => setNewMessage(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && sendMessage()}
+            />
+            <button className="btn btn-primary" onClick={sendMessage}>Send</button>
+          </div>
         </div>
       )}
 
