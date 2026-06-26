@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import RoutingMachine from '../components/RoutingMachine';
 import { useAppStore } from '../store/useAppStore';
 import { supabase } from '../lib/supabase';
+import { Geolocation } from '@capacitor/geolocation';
 
 // Fix for default leaflet icons not showing in Vite
 delete L.Icon.Default.prototype._getIconUrl;
@@ -75,15 +76,17 @@ export default function CustomerDashboard() {
     };
   }, [currentUser]);
 
-  // Simulate real-time GPS update
+  // Native mobile GPS update
   useEffect(() => {
-    if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => setPosition([pos.coords.latitude, pos.coords.longitude]),
-        (err) => console.log(err),
-        { enableHighAccuracy: true }
-      );
-    }
+    const fetchLocation = async () => {
+      try {
+        const coordinates = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
+        setPosition([coordinates.coords.latitude, coordinates.coords.longitude]);
+      } catch (e) {
+        console.error('GPS Error:', e);
+      }
+    };
+    fetchLocation();
   }, []);
 
   const handleFindDriver = () => {
