@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
-import { Search, MapPin, Navigation2, Clock, User } from 'lucide-react';
+import { Search, MapPin, Navigation2, Clock, User, Wallet, History, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import RoutingMachine from '../components/RoutingMachine';
 import { useAppStore } from '../store/useAppStore';
@@ -22,6 +22,16 @@ const userIcon = new L.Icon({
   className: 'leaflet-custom-icon-user'
 });
 
+const getDistance = (lat1, lon1, lat2, lon2) => {
+  const R = 6371; // km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+};
+
 export default function CustomerDashboard() {
   const navigate = useNavigate();
   const [position, setPosition] = useState([15.7909, 120.9859]); // San Jose City
@@ -30,8 +40,19 @@ export default function CustomerDashboard() {
   const [routeInfo, setRouteInfo] = useState(null);
   
   const currentUser = useAppStore(state => state.currentUser);
+  const walletBalance = useAppStore(state => state.walletBalance);
   
   const [channel, setChannel] = useState(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const [rideHistory, setRideHistory] = useState([]);
+
+  const fetchHistory = async () => {
+    if (currentUser) {
+      const { data } = await supabase.from('rides').select('*').eq('customer_id', currentUser.id).order('created_at', { ascending: false });
+      setRideHistory(data || []);
+      setShowHistory(true);
+    }
+  };
 
   useEffect(() => {
     // Setup Supabase Realtime Channel
@@ -68,6 +89,12 @@ export default function CustomerDashboard() {
   const handleFindDriver = () => {
     setSearching(true);
     
+    // Calculate dynamic fare
+    const dropoff = [15.7226, 120.9028]; // Munoz
+    const straightDist = getDistance(position[0], position[1], dropoff[0], dropoff[1]);
+    const estDrivingDist = straightDist * 1.3;
+    const dynamicFare = Math.round(50 + (estDrivingDist * 15));
+
     // Broadcast ride request to all online drivers
     if (channel) {
       channel.send({
@@ -77,7 +104,8 @@ export default function CustomerDashboard() {
           customerId: currentUser?.id,
           customerName: currentUser?.user_metadata?.full_name || 'Customer',
           pickup: position,
-          dropoff: [15.7226, 120.9028] // Munoz
+          dropoff: dropoff,
+          fare: dynamicFare
         }
       });
     }
@@ -97,8 +125,12 @@ export default function CustomerDashboard() {
       
       {/* Top Search Bar */}
       <div className="p-4" style={{ position: 'absolute', top: 0, width: '100%', zIndex: 1000 }}>
-          <div className="flex justify-between items-center w-full mb-2">
+          <div className="flex justify-between items-center w-full mb-2 px-2 pt-2">
             {currentUser && <div className="text-primary text-sm font-bold flex items-center gap-1"><User size={16}/> Hi, Rider!</div>}
+            <div className="flex items-center gap-4">
+              <div className="text-secondary text-sm font-bold flex items-center gap-1 cursor-pointer" onClick={fetchHistory}><History size={16}/> History</div>
+              <div className="text-secondary text-sm font-bold flex items-center gap-1"><Wallet size={16}/> ₱ {walletBalance.toFixed(2)}</div>
+            </div>
           </div>
           <div className="glass-card" style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
           <Search className="text-muted" size={20} />
@@ -196,6 +228,36 @@ export default function CustomerDashboard() {
           </div>
         )}
       </div>
+
+      {/* History Modal */}
+      {showHistory && (
+        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 2000, display: 'flex', alignItems: 'flex-end' }}>
+          <div className="glass-card animate-slide-up w-full" style={{ borderBottomLeftRadius: 0, borderBottomRightRadius: 0, padding: '2rem', maxHeight: '80vh', overflowY: 'auto' }}>
+            <div className="flex justify-between items-center mb-4">
+              <h3>Ride History</h3>
+              <X className="cursor-pointer" onClick={() => setShowHistory(false)} />
+            </div>
+            {rideHistory.length === 0 ? (
+              <p className="text-muted text-center">No past rides found.</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {rideHistory.map(ride => (
+                  <div key={ride.id} className="p-3 bg-surface-light rounded" style={{ background: 'var(--surface-light)', borderRadius: '8px' }}>
+                    <div className="flex justify-between">
+                      <strong>{new Date(ride.created_at).toLocaleDateString()}</strong>
+                      <span className="text-primary font-bold">₱ {ride.fare}</span>
+                    </div>
+                    <div className="text-sm mt-1 text-muted">
+                      <div><MapPin size={12} className="inline mr-1"/> {ride.pickup}</div>
+                      <div><MapPin size={12} className="inline mr-1 text-danger"/> {ride.dropoff}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
     </div>
   );

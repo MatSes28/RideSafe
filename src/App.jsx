@@ -6,6 +6,7 @@ import CustomerRegister from './pages/CustomerRegister';
 import DriverRegister from './pages/DriverRegister';
 import CustomerDashboard from './pages/CustomerDashboard';
 import DriverDashboard from './pages/DriverDashboard';
+import AdminDashboard from './pages/AdminDashboard';
 
 import { useAppStore } from './store/useAppStore';
 
@@ -24,6 +25,7 @@ function App() {
           <Route path="/register-driver" element={<DriverRegister />} />
           <Route path="/customer-dash" element={<CustomerDashboard />} />
           <Route path="/driver-dash" element={<DriverDashboard />} />
+          <Route path="/admin" element={<AdminDashboard />} />
         </Routes>
       </div>
     </BrowserRouter>

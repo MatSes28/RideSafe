@@ -54,12 +54,29 @@ export default function DriverRegister() {
       }
     });
 
-    setLoading(false);
-
     if (error) {
+      setLoading(false);
       setErrorMsg(error.message);
       return;
     }
+
+    const userId = data.user.id;
+
+    // Upload ID & License
+    const idFileName = `${userId}/driver_id_${Date.now()}`;
+    const licenseFileName = `${userId}/license_${Date.now()}`;
+    await supabase.storage.from('verifications').upload(idFileName, idFile);
+    await supabase.storage.from('verifications').upload(licenseFileName, licenseFile);
+
+    // Create profile (unapproved initially)
+    await supabase.from('profiles').insert({
+      id: userId,
+      role: 'driver',
+      is_approved: false,
+      wallet_balance: 0
+    });
+
+    setLoading(false);
 
     setSubmitted(true);
     setTimeout(() => {

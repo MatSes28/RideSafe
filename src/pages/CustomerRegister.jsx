@@ -43,12 +43,26 @@ export default function CustomerRegister() {
       }
     });
 
-    setLoading(false);
-
     if (error) {
+      setLoading(false);
       setErrorMsg(error.message);
       return;
     }
+
+    const userId = data.user.id;
+
+    // Upload ID to storage
+    const idFileName = `${userId}/customer_id_${Date.now()}`;
+    await supabase.storage.from('verifications').upload(idFileName, idFile);
+
+    // Create profile
+    await supabase.from('profiles').insert({
+      id: userId,
+      role: 'customer',
+      wallet_balance: 500 // give them some initial credit to test
+    });
+
+    setLoading(false);
 
     setSubmitted(true);
     setTimeout(() => {
