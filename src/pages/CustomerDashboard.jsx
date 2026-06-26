@@ -91,6 +91,38 @@ export default function CustomerDashboard() {
     const amount = parseFloat(topUpAmount);
     if (isNaN(amount) || amount <= 0) return;
     
+    // PayMongo Integration
+    const paymongoKey = import.meta.env.VITE_PAYMONGO_SECRET_KEY;
+    if (paymongoKey) {
+      try {
+        const response = await fetch('https://api.paymongo.com/v1/links', {
+          method: 'POST',
+          headers: {
+            accept: 'application/json',
+            'content-type': 'application/json',
+            authorization: `Basic ${btoa(paymongoKey + ':')}`
+          },
+          body: JSON.stringify({
+            data: {
+              attributes: {
+                amount: amount * 100, // PayMongo uses centavos
+                description: 'RideSafe Wallet Top-Up',
+                remarks: currentUser?.id
+              }
+            }
+          })
+        });
+        const data = await response.json();
+        if (data?.data?.attributes?.checkout_url) {
+          window.open(data.data.attributes.checkout_url, '_blank');
+        } else {
+          alert('Failed to generate PayMongo link. Check API Key.');
+        }
+      } catch (e) {
+        console.error('PayMongo Error:', e);
+      }
+    }
+
     // Update local and remote wallet
     if (currentUser) {
       const { data } = await supabase.from('profiles').select('wallet_balance').eq('id', currentUser.id).single();
