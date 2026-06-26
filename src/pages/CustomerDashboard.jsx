@@ -23,6 +23,11 @@ const userIcon = new L.Icon({
   className: 'leaflet-custom-icon-user'
 });
 
+const driverIcon = new L.Icon({
+  iconUrl: 'https://cdn-icons-png.flaticon.com/512/1048/1048314.png',
+  iconSize: [35, 35]
+});
+
 const getDistance = (lat1, lon1, lat2, lon2) => {
   const R = 6371; // km
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -42,6 +47,30 @@ export default function CustomerDashboard() {
   
   const currentUser = useAppStore(state => state.currentUser);
   const walletBalance = useAppStore(state => state.walletBalance);
+  
+  const [driverPosition, setDriverPosition] = useState(null);
+  const [showProfile, setShowProfile] = useState(false);
+  const [homeAddress, setHomeAddress] = useState('');
+  const [workAddress, setWorkAddress] = useState('');
+  
+  // Load profile addresses
+  useEffect(() => {
+    if (currentUser) {
+      supabase.from('profiles').select('home_address, work_address').eq('id', currentUser.id).single().then(({data}) => {
+        if (data) {
+          setHomeAddress(data.home_address || '');
+          setWorkAddress(data.work_address || '');
+        }
+      });
+    }
+  }, [currentUser]);
+
+  const saveProfile = async () => {
+    if (currentUser) {
+      await supabase.from('profiles').update({ home_address: homeAddress, work_address: workAddress }).eq('id', currentUser.id);
+      setShowProfile(false);
+    }
+  };
   
   const [channel, setChannel] = useState(null);
   const [showHistory, setShowHistory] = useState(false);
@@ -144,7 +173,10 @@ export default function CustomerDashboard() {
         setBooking(false);
         setCompletedRideId(payload.payload.rideId);
         setShowReview(true);
+        setDriverPosition(null);
       }
+    }).on('broadcast', { event: 'driver_location_update' }, (payload) => {
+       setDriverPosition(payload.payload.position);
     }).subscribe();
 
     setChannel(ridesChannel);
@@ -207,7 +239,7 @@ export default function CustomerDashboard() {
       {/* Top Search Bar */}
       <div className="p-4" style={{ position: 'absolute', top: 0, width: '100%', zIndex: 1000 }}>
           <div className="flex justify-between items-center w-full mb-2 px-2 pt-2">
-            {currentUser && <div className="text-primary text-sm font-bold flex items-center gap-1"><User size={16}/> Hi, Rider!</div>}
+            {currentUser && <div className="text-primary text-sm font-bold flex items-center gap-1 cursor-pointer" onClick={() => setShowProfile(true)}><User size={16}/> Hi, Rider!</div>}
             <div className="flex items-center gap-4">
               <div className="text-secondary text-sm font-bold flex items-center gap-1 cursor-pointer" onClick={fetchHistory}><History size={16}/> History</div>
               <div className="text-secondary text-sm font-bold flex items-center gap-1 cursor-pointer" onClick={() => setShowTopUp(true)}><PlusCircle size={16}/> Top-Up</div>
@@ -237,6 +269,12 @@ export default function CustomerDashboard() {
           <Marker position={position}>
             <Popup>You are here</Popup>
           </Marker>
+
+          {driverPosition && booking && (
+            <Marker position={driverPosition} icon={driverIcon}>
+              <Popup>Your Driver</Popup>
+            </Marker>
+          )}
           
           {/* Simulated Real Map Routing */}
           {booking && (
@@ -419,6 +457,41 @@ export default function CustomerDashboard() {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Profile Modal */}
+      {showProfile && (
+        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="glass-card w-11/12 max-w-sm" style={{ padding: '2rem' }}>
+            <h3 className="mb-4">My Profile</h3>
+            <div className="flex flex-col gap-3">
+              <div>
+                <label className="text-sm text-muted">Home Address</label>
+                <input 
+                  type="text" 
+                  className="input w-full mt-1" 
+                  value={homeAddress}
+                  onChange={e => setHomeAddress(e.target.value)}
+                  placeholder="e.g. 123 Main St"
+                />
+              </div>
+              <div>
+                <label className="text-sm text-muted">Work Address</label>
+                <input 
+                  type="text" 
+                  className="input w-full mt-1" 
+                  value={workAddress}
+                  onChange={e => setWorkAddress(e.target.value)}
+                  placeholder="e.g. 456 Business Rd"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 mt-4">
+              <button className="btn btn-outline flex-1" onClick={() => setShowProfile(false)}>Cancel</button>
+              <button className="btn btn-primary flex-1" onClick={saveProfile}>Save</button>
+            </div>
           </div>
         </div>
       )}

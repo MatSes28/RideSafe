@@ -1,34 +1,69 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { CheckCircle, XCircle } from 'lucide-react';
+import { CheckCircle, XCircle, Users, Activity, DollarSign, Map as MapIcon, ClipboardCheck } from 'lucide-react';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import L from 'leaflet';
+
+// Fix for default leaflet icons not showing in Vite
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
+const driverIcon = new L.Icon({
+  iconUrl: 'https://cdn-icons-png.flaticon.com/512/1048/1048314.png',
+  iconSize: [35, 35]
+});
 
 export default function AdminDashboard() {
+  const [activeTab, setActiveTab] = useState('approvals'); // approvals, analytics, map
   const [drivers, setDrivers] = useState([]);
+  
+  // Analytics
+  const [totalRevenue, setTotalRevenue] = useState(0);
+  const [totalRides, setTotalRides] = useState(0);
+  const [totalUsers, setTotalUsers] = useState(0);
+
+  // Live Map
+  const [liveDrivers, setLiveDrivers] = useState({});
 
   useEffect(() => {
     fetchDrivers();
+    fetchAnalytics();
+
+    // Listen to live driver locations
+    const ridesChannel = supabase.channel('rides', { config: { broadcast: { self: true } } });
+    ridesChannel.on('broadcast', { event: 'driver_location_update' }, (payload) => {
+      setLiveDrivers(prev => ({
+        ...prev,
+        [payload.payload.rideId]: payload.payload.position
+      }));
+    }).subscribe();
+
+    return () => supabase.removeChannel(ridesChannel);
   }, []);
 
   const fetchDrivers = async () => {
-    // Fetch profiles where role is driver and is_approved is false
-    const { data } = await supabase
-      .from('profiles')
-      .select('id, is_approved, wallet_balance, ...auth.users!inner(email, raw_user_meta_data)')
-      .eq('role', 'driver')
-      .eq('is_approved', false);
-      
-    // In Supabase, joining auth.users is restricted, so we actually need a backend or service role key. 
-    // Wait, we can just fetch all profiles that are drivers. But profiles don't store full name.
-    // Ah, wait. I should fetch all profiles and use them if they contain metadata. 
-    // To make this work safely without service role, we should have stored full_name in the profiles table!
-    // Since we didn't, let's just fetch profiles and display the ID for now in the prototype.
     const { data: profileData } = await supabase
       .from('profiles')
       .select('*')
       .eq('role', 'driver')
       .eq('is_approved', false);
-
     setDrivers(profileData || []);
+  };
+
+  const fetchAnalytics = async () => {
+    const { data: profiles } = await supabase.from('profiles').select('id');
+    setTotalUsers(profiles?.length || 0);
+
+    const { data: rides } = await supabase.from('rides').select('fare').eq('status', 'completed');
+    if (rides) {
+      setTotalRides(rides.length);
+      const revenue = rides.reduce((sum, ride) => sum + ride.fare, 0);
+      setTotalRevenue(revenue);
+    }
   };
 
   const handleApprove = async (id) => {
@@ -37,32 +72,108 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="p-4 animate-fade-in" style={{ paddingTop: '2rem' }}>
-      <h2>Admin Dashboard</h2>
-      <p className="text-muted mb-4">Pending Driver Applications</p>
+    <div className="flex flex-col h-screen" style={{ background: 'var(--background)' }}>
+      {/* Header */}
+      <div className="p-4" style={{ background: 'var(--surface-color)', borderBottom: '1px solid var(--border)' }}>
+        <h2 className="m-0 flex items-center gap-2" style={{ color: 'var(--primary)' }}>
+          <Activity size={24} /> Admin God Mode
+        </h2>
+      </div>
 
-      {drivers.length === 0 ? (
-        <div className="glass-card text-center p-4">No pending applications.</div>
-      ) : (
-        <div className="flex flex-col gap-4">
-          {drivers.map(driver => (
-            <div key={driver.id} className="glass-card flex justify-between items-center p-4">
-              <div>
-                <h4 className="mb-1">Driver ID:</h4>
-                <p className="text-muted" style={{ fontSize: '0.8rem' }}>{driver.id}</p>
+      {/* Tabs */}
+      <div className="flex px-4 pt-4 gap-2 border-b" style={{ borderColor: 'var(--border)' }}>
+        <button 
+          className={`flex items-center gap-2 pb-2 ${activeTab === 'approvals' ? 'border-b-2' : 'text-muted'}`}
+          style={{ borderColor: activeTab === 'approvals' ? 'var(--primary)' : 'transparent', color: activeTab === 'approvals' ? 'var(--text-main)' : 'var(--text-muted)', background: 'transparent' }}
+          onClick={() => setActiveTab('approvals')}
+        >
+          <ClipboardCheck size={18} /> Approvals
+        </button>
+        <button 
+          className={`flex items-center gap-2 pb-2 ${activeTab === 'analytics' ? 'border-b-2' : 'text-muted'}`}
+          style={{ borderColor: activeTab === 'analytics' ? 'var(--primary)' : 'transparent', color: activeTab === 'analytics' ? 'var(--text-main)' : 'var(--text-muted)', background: 'transparent' }}
+          onClick={() => setActiveTab('analytics')}
+        >
+          <DollarSign size={18} /> Analytics
+        </button>
+        <button 
+          className={`flex items-center gap-2 pb-2 ${activeTab === 'map' ? 'border-b-2' : 'text-muted'}`}
+          style={{ borderColor: activeTab === 'map' ? 'var(--primary)' : 'transparent', color: activeTab === 'map' ? 'var(--text-main)' : 'var(--text-muted)', background: 'transparent' }}
+          onClick={() => setActiveTab('map')}
+        >
+          <MapIcon size={18} /> Live Map
+        </button>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto p-4 relative">
+        
+        {activeTab === 'approvals' && (
+          <div className="animate-fade-in">
+            {drivers.length === 0 ? (
+              <div className="glass-card text-center p-4">No pending applications.</div>
+            ) : (
+              <div className="flex flex-col gap-4">
+                {drivers.map(driver => (
+                  <div key={driver.id} className="glass-card flex justify-between items-center p-4">
+                    <div>
+                      <h4 className="mb-1">Driver ID:</h4>
+                      <p className="text-muted" style={{ fontSize: '0.8rem' }}>{driver.id}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button className="btn btn-outline" style={{ color: 'var(--danger)', borderColor: 'var(--danger)', padding: '0.5rem' }}>
+                        <XCircle size={18} /> Reject
+                      </button>
+                      <button className="btn btn-primary" style={{ padding: '0.5rem' }} onClick={() => handleApprove(driver.id)}>
+                        <CheckCircle size={18} /> Approve
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div className="flex gap-2">
-                <button className="btn btn-outline" style={{ color: 'var(--danger)', borderColor: 'var(--danger)', padding: '0.5rem' }}>
-                  <XCircle size={18} /> Reject
-                </button>
-                <button className="btn btn-primary" style={{ padding: '0.5rem' }} onClick={() => handleApprove(driver.id)}>
-                  <CheckCircle size={18} /> Approve
-                </button>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'analytics' && (
+          <div className="animate-fade-in flex flex-col gap-4">
+            <div className="glass-card p-6 flex flex-col items-center justify-center">
+              <DollarSign size={48} className="text-secondary mb-2" />
+              <h2 className="m-0" style={{ fontSize: '2.5rem' }}>₱ {totalRevenue.toFixed(2)}</h2>
+              <p className="text-muted">Total Gross Revenue</p>
+            </div>
+            <div className="flex gap-4">
+              <div className="glass-card flex-1 p-4 flex flex-col items-center">
+                <Activity size={24} className="text-primary mb-2" />
+                <h3 className="m-0">{totalRides}</h3>
+                <p className="text-muted text-sm text-center">Completed Rides</p>
+              </div>
+              <div className="glass-card flex-1 p-4 flex flex-col items-center">
+                <Users size={24} className="text-primary mb-2" />
+                <h3 className="m-0">{totalUsers}</h3>
+                <p className="text-muted text-sm text-center">Registered Users</p>
               </div>
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+        )}
+
+        {activeTab === 'map' && (
+          <div className="absolute inset-0 animate-fade-in">
+            <MapContainer center={[15.7909, 120.9859]} zoom={13} style={{ height: '100%', width: '100%' }} zoomControl={false}>
+              <TileLayer
+                url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+                attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+              />
+              {Object.keys(liveDrivers).map(rideId => (
+                <Marker key={rideId} position={liveDrivers[rideId]} icon={driverIcon}>
+                  <Popup>Driver (Ride: {rideId.substring(0,6)})</Popup>
+                </Marker>
+              ))}
+            </MapContainer>
+          </div>
+        )}
+
+      </div>
     </div>
   );
 }

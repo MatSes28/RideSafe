@@ -6,6 +6,7 @@ import RoutingMachine from '../components/RoutingMachine';
 import { useAppStore } from '../store/useAppStore';
 import { supabase } from '../lib/supabase';
 import { Geolocation } from '@capacitor/geolocation';
+import { LocalNotifications } from '@capacitor/local-notifications';
 
 // Fix for default leaflet icons not showing in Vite
 delete L.Icon.Default.prototype._getIconUrl;
@@ -25,6 +26,29 @@ export default function DriverDashboard() {
   const isApproved = useAppStore(state => state.isApproved);
   const [channel, setChannel] = useState(null);
   const [currentRequest, setCurrentRequest] = useState(null);
+  
+  const [showProfile, setShowProfile] = useState(false);
+  const [homeAddress, setHomeAddress] = useState('');
+  const [workAddress, setWorkAddress] = useState('');
+
+  // Load profile addresses
+  useEffect(() => {
+    if (currentUser) {
+      supabase.from('profiles').select('home_address, work_address').eq('id', currentUser.id).single().then(({data}) => {
+        if (data) {
+          setHomeAddress(data.home_address || '');
+          setWorkAddress(data.work_address || '');
+        }
+      });
+    }
+  }, [currentUser]);
+
+  const saveProfile = async () => {
+    if (currentUser) {
+      await supabase.from('profiles').update({ home_address: homeAddress, work_address: workAddress }).eq('id', currentUser.id);
+      setShowProfile(false);
+    }
+  };
   
   const [showHistory, setShowHistory] = useState(false);
   const [rideHistory, setRideHistory] = useState([]);
@@ -88,6 +112,7 @@ export default function DriverDashboard() {
 
   // Native mobile GPS update
   useEffect(() => {
+    LocalNotifications.requestPermissions();
     const fetchLocation = async () => {
       try {
         const coordinates = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
@@ -99,6 +124,31 @@ export default function DriverDashboard() {
     fetchLocation();
   }, []);
 
+  // Live Driver Tracking Loop
+  useEffect(() => {
+    let interval;
+    if (accepted && channel && activeRideId) {
+      interval = setInterval(async () => {
+        try {
+          const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
+          const newPos = [pos.coords.latitude, pos.coords.longitude];
+          setPosition(newPos);
+          channel.send({
+            type: 'broadcast',
+            event: 'driver_location_update',
+            payload: {
+              rideId: activeRideId,
+              position: newPos
+            }
+          });
+        } catch (e) {
+          console.error(e);
+        }
+      }, 3000);
+    }
+    return () => clearInterval(interval);
+  }, [accepted, channel, activeRideId]);
+
   useEffect(() => {
     const ridesChannel = supabase.channel('rides', {
       config: { broadcast: { self: true } }
@@ -109,6 +159,13 @@ export default function DriverDashboard() {
       if (online && !accepted) {
         setIncomingRequest(true);
         setCurrentRequest(payload.payload); // contains customerId, customerName, etc.
+        LocalNotifications.schedule({
+          notifications: [{
+            title: "New Ride Request!",
+            body: `Pickup: ${payload.payload.customerName}`,
+            id: new Date().getTime()
+          }]
+        });
       }
     }).subscribe();
 
@@ -201,7 +258,7 @@ export default function DriverDashboard() {
       {/* Top Status Bar */}
       <div className="p-4" style={{ position: 'absolute', top: 0, width: '100%', zIndex: 1000 }}>
         <div className="flex justify-between items-center w-full mb-2 px-2 pt-2">
-            {currentUser && <div className="text-primary text-sm font-bold flex items-center gap-1"><User size={16}/> Hi, Driver!</div>}
+            {currentUser && <div className="text-primary text-sm font-bold flex items-center gap-1 cursor-pointer" onClick={() => setShowProfile(true)}><User size={16}/> Hi, Driver!</div>}
             <div className="flex items-center gap-4">
               <div className="text-secondary text-sm font-bold flex items-center gap-1 cursor-pointer" onClick={fetchHistory}><History size={16}/> History</div>
               <div className="text-secondary text-sm font-bold flex items-center gap-1"><Wallet size={16}/> ₱ {walletBalance.toFixed(2)}</div>
@@ -373,6 +430,41 @@ export default function DriverDashboard() {
           </div>
         </div>
       )}
+      {/* Profile Modal */}
+      {showProfile && (
+        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="glass-card w-11/12 max-w-sm" style={{ padding: '2rem' }}>
+            <h3 className="mb-4">My Profile</h3>
+            <div className="flex flex-col gap-3">
+              <div>
+                <label className="text-sm text-muted">Home Address</label>
+                <input 
+                  type="text" 
+                  className="input w-full mt-1" 
+                  value={homeAddress}
+                  onChange={e => setHomeAddress(e.target.value)}
+                  placeholder="e.g. 123 Main St"
+                />
+              </div>
+              <div>
+                <label className="text-sm text-muted">Work Address</label>
+                <input 
+                  type="text" 
+                  className="input w-full mt-1" 
+                  value={workAddress}
+                  onChange={e => setWorkAddress(e.target.value)}
+                  placeholder="e.g. 456 Business Rd"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 mt-4">
+              <button className="btn btn-outline flex-1" onClick={() => setShowProfile(false)}>Cancel</button>
+              <button className="btn btn-primary flex-1" onClick={saveProfile}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
