@@ -20,7 +20,7 @@ import { useLocation } from 'react-router-dom';
 
 function AppLayout() {
   const location = useLocation();
-  const fullScreenRoutes = ['/', '/login', '/register-customer', '/register-driver', '/admin/login', '/operator/login'];
+  const fullScreenRoutes = ['/', '/login', '/register-customer', '/register-driver', '/admin/login', '/operator/login', '/admin', '/operator'];
   const isFullScreen = fullScreenRoutes.includes(location.pathname);
 
   return (

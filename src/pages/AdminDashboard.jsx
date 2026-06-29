@@ -209,13 +209,13 @@ export default function AdminDashboard() {
               <h2 className="m-0" style={{ fontSize: '2.5rem' }}>₱ {totalRevenue.toFixed(2)}</h2>
               <p className="text-muted">Total Gross Revenue</p>
             </div>
-            <div className="flex gap-4">
-              <div className="glass-card flex-1 p-4 flex flex-col items-center">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="glass-card p-4 flex flex-col items-center">
                 <Activity size={24} className="text-primary mb-2" />
                 <h3 className="m-0">{totalRides}</h3>
                 <p className="text-muted text-sm text-center">Completed Rides</p>
               </div>
-              <div className="glass-card flex-1 p-4 flex flex-col items-center">
+              <div className="glass-card p-4 flex flex-col items-center">
                 <Users size={24} className="text-primary mb-2" />
                 <h3 className="m-0">{totalUsers}</h3>
                 <p className="text-muted text-sm text-center">Registered Users</p>

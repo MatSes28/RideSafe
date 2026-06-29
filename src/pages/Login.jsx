@@ -45,7 +45,7 @@ export default function Login() {
     <div className="min-h-screen w-full bg-[#F8FAFC] flex font-sans box-border overflow-hidden">
       
       {/* LEFT COLUMN: BRANDING & MARKETING */}
-      <div className="hidden lg:flex lg:w-[55%] xl:w-[60%] bg-gradient-to-br from-[#020617] via-[#0F172A] to-[#00A86B]/30 relative overflow-hidden flex-col justify-between p-16 xl:p-24 shadow-[20px_0_50px_rgba(0,0,0,0.5)] z-10">
+      <div className="hidden lg:flex lg:w-[55%] xl:w-[60%] bg-gradient-to-br from-[#020617] via-[#0F172A] to-[#0ea5e9]/30 relative overflow-hidden flex-col justify-between p-16 xl:p-24 shadow-[20px_0_50px_rgba(0,0,0,0.5)] z-10">
          
          {/* Deep Ambient Glow */}
          <div className="absolute -top-40 -left-40 w-[600px] h-[600px] bg-[radial-gradient(circle,_rgba(0,168,107,0.15)_0%,_transparent_70%)] pointer-events-none mix-blend-screen"></div>
@@ -61,24 +61,24 @@ export default function Login() {
            <div className="flex-1 flex flex-col justify-center mt-12">
              <h1 className="text-5xl xl:text-7xl font-black text-white mb-6 leading-[1.05] tracking-tight drop-shadow-lg">
                Your Everyday <br/>
-               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00A86B] to-[#34d399]">SuperApp.</span>
+               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0ea5e9] to-[#38bdf8]">SuperApp.</span>
              </h1>
              <p className="text-slate-300 text-xl max-w-lg leading-relaxed mb-12 font-medium drop-shadow-md">
                Book rides, order food, and send packages across San Jose, Muñoz, and Talavera. The entire city in one powerful app.
              </p>
              
-             <div className="flex flex-col gap-5">
-                <div className="flex items-center gap-5 text-white font-bold bg-white/5 p-5 rounded-2xl border border-white/10 backdrop-blur-md max-w-md shadow-2xl transition-all hover:bg-white/10 hover:-translate-y-1">
-                   <div className="bg-[#00A86B]/20 p-3 rounded-xl shadow-inner border border-[#00A86B]/30">
-                     <Shield className="text-[#34d399] w-6 h-6 shrink-0"/>
+             <div className="flex flex-col gap-6 mt-4">
+                <div className="flex items-center gap-5 text-white font-bold transition-transform hover:-translate-y-1">
+                   <div className="bg-[#0ea5e9]/20 p-4 rounded-2xl shadow-[inset_0_0_15px_rgba(0,168,107,0.2)] border border-[#0ea5e9]/30">
+                     <Shield className="text-[#38bdf8] w-6 h-6 shrink-0"/>
                    </div>
-                   <span className="text-lg">Biometric security & verified drivers</span>
+                   <span className="text-lg tracking-wide drop-shadow-md">Biometric security & verified drivers</span>
                 </div>
-                <div className="flex items-center gap-5 text-white font-bold bg-white/5 p-5 rounded-2xl border border-white/10 backdrop-blur-md max-w-md shadow-2xl transition-all hover:bg-white/10 hover:-translate-y-1">
-                   <div className="bg-[#00A86B]/20 p-3 rounded-xl shadow-inner border border-[#00A86B]/30">
-                     <CheckCircle className="text-[#34d399] w-6 h-6 shrink-0"/>
+                <div className="flex items-center gap-5 text-white font-bold transition-transform hover:-translate-y-1">
+                   <div className="bg-[#0ea5e9]/20 p-4 rounded-2xl shadow-[inset_0_0_15px_rgba(0,168,107,0.2)] border border-[#0ea5e9]/30">
+                     <CheckCircle className="text-[#38bdf8] w-6 h-6 shrink-0"/>
                    </div>
-                   <span className="text-lg">Cashless & seamless payments</span>
+                   <span className="text-lg tracking-wide drop-shadow-md">Cashless & seamless payments</span>
                 </div>
              </div>
            </div>
@@ -115,7 +115,7 @@ export default function Login() {
            <div className="w-full max-w-[420px] bg-white p-10 sm:p-12 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 animate-fade-in relative overflow-hidden">
               
               {/* Subtle top accent line */}
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#00A86B] to-[#34d399]"></div>
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#0ea5e9] to-[#38bdf8]"></div>
 
               <div className="mb-10 text-center">
                 <h2 className="text-[2rem] font-black text-slate-900 mb-3 tracking-tight">Welcome Back</h2>
@@ -135,7 +135,7 @@ export default function Login() {
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold border-r border-slate-200 pr-3">+63</span>
                     <input 
                       type="tel" 
-                      className="w-full bg-slate-50/50 border border-slate-200 text-slate-900 pl-16 pr-5 py-4 rounded-xl text-lg font-bold transition-all focus:bg-white focus:border-[#00A86B] focus:ring-4 focus:ring-[#00A86B]/10 outline-none shadow-sm placeholder-slate-300" 
+                      className="w-full bg-slate-50/50 border border-slate-200 text-slate-900 pl-16 pr-5 py-4 rounded-xl text-lg font-bold transition-all focus:bg-white focus:border-[#0ea5e9] focus:ring-4 focus:ring-[#0ea5e9]/10 outline-none shadow-sm placeholder-slate-300" 
                       placeholder="9XX XXX XXXX" 
                       required 
                       value={phone} 
@@ -147,11 +147,11 @@ export default function Login() {
                 <div className="flex flex-col gap-2 mt-2">
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex justify-between">
                     <span>Password</span>
-                    <span className="text-[#00A86B] hover:text-[#047857] cursor-pointer capitalize tracking-normal">Forgot?</span>
+                    <span className="text-[#0ea5e9] hover:text-[#047857] cursor-pointer capitalize tracking-normal">Forgot?</span>
                   </label>
                   <input 
                     type="password" 
-                    className="w-full bg-slate-50/50 border border-slate-200 text-slate-900 px-5 py-4 rounded-xl text-lg font-bold transition-all focus:bg-white focus:border-[#00A86B] focus:ring-4 focus:ring-[#00A86B]/10 outline-none shadow-sm placeholder-slate-300" 
+                    className="w-full bg-slate-50/50 border border-slate-200 text-slate-900 px-5 py-4 rounded-xl text-lg font-bold transition-all focus:bg-white focus:border-[#0ea5e9] focus:ring-4 focus:ring-[#0ea5e9]/10 outline-none shadow-sm placeholder-slate-300" 
                     placeholder="••••••••" 
                     required 
                     value={password} 
@@ -161,7 +161,7 @@ export default function Login() {
 
                 <button 
                   type="submit" 
-                  className="w-full bg-[#00A86B] text-white rounded-xl py-4.5 font-bold text-[1.1rem] shadow-[0_8px_20px_rgba(0,168,107,0.25)] transition-all duration-200 active:scale-[0.98] hover:shadow-[0_10px_25px_rgba(0,168,107,0.35)] hover:-translate-y-0.5 flex justify-center items-center gap-3 mt-8 disabled:opacity-70 disabled:cursor-not-allowed group"
+                  className="w-full bg-[#0ea5e9] text-white rounded-xl py-4.5 font-bold text-[1.1rem] shadow-[0_8px_20px_rgba(0,168,107,0.25)] transition-all duration-200 active:scale-[0.98] hover:shadow-[0_10px_25px_rgba(0,168,107,0.35)] hover:-translate-y-0.5 flex justify-center items-center gap-3 mt-8 disabled:opacity-70 disabled:cursor-not-allowed group"
                   disabled={loading}
                 >
                   {loading ? "Verifying..." : "Sign In Securely"}
@@ -176,13 +176,13 @@ export default function Login() {
             <p className="text-slate-500 font-bold text-xs uppercase tracking-widest">Don't have an account?</p>
             <div className="flex flex-col sm:flex-row gap-4 w-full max-w-[420px]">
               <button 
-                className="flex-1 bg-white border border-slate-200 text-slate-700 rounded-xl py-3.5 font-bold transition-all duration-200 hover:border-[#00A86B] hover:text-[#00A86B] active:scale-[0.98] shadow-sm flex items-center justify-center gap-2"
+                className="flex-1 bg-white border border-slate-200 text-slate-700 rounded-xl py-3.5 font-bold transition-all duration-200 hover:border-[#0ea5e9] hover:text-[#0ea5e9] active:scale-[0.98] shadow-sm flex items-center justify-center gap-2"
                 onClick={() => navigate('/register-customer')}
               >
                 Create Account
               </button>
               <button 
-                className="flex-1 bg-white border border-slate-200 text-slate-700 rounded-xl py-3.5 font-bold transition-all duration-200 hover:border-[#00A86B] hover:text-[#00A86B] active:scale-[0.98] shadow-sm flex items-center justify-center gap-2"
+                className="flex-1 bg-white border border-slate-200 text-slate-700 rounded-xl py-3.5 font-bold transition-all duration-200 hover:border-[#0ea5e9] hover:text-[#0ea5e9] active:scale-[0.98] shadow-sm flex items-center justify-center gap-2"
                 onClick={() => navigate('/register-driver')}
               >
                 Apply to Drive

@@ -46,7 +46,7 @@ export default function OperatorDashboard() {
       <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
         {activeTab === 'overview' && (
           <div className="animate-fade-in flex flex-col gap-4">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="bg-surface-color p-4 rounded-xl shadow-sm border border-gray-100">
                 <div className="flex items-center gap-2 text-muted mb-2"><Users size={16}/> <span className="text-xs font-bold uppercase">Total Drivers</span></div>
                 <h2 className="m-0 text-3xl font-black text-primary">3</h2>
