@@ -7,8 +7,12 @@ import DriverRegister from './pages/DriverRegister';
 import CustomerDashboard from './pages/CustomerDashboard';
 import DriverDashboard from './pages/DriverDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import AdminLogin from './pages/AdminLogin';
+import OperatorDashboard from './pages/OperatorDashboard';
+import TrackingPage from './pages/TrackingPage';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
+import ProtectedRoute from './components/ProtectedRoute';
 
 import { useAppStore } from './store/useAppStore';
 
@@ -27,9 +31,13 @@ function App() {
           <Route path="/register-driver" element={<DriverRegister />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
-          <Route path="/customer-dash" element={<CustomerDashboard />} />
-          <Route path="/driver-dash" element={<DriverDashboard />} />
-          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/customer-dash" element={<ProtectedRoute allowedRoles={['customer']}><CustomerDashboard /></ProtectedRoute>} />
+          <Route path="/driver-dash" element={<ProtectedRoute allowedRoles={['driver']}><DriverDashboard /></ProtectedRoute>} />
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/operator/login" element={<AdminLogin />} />
+          <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']} fallbackPath="/admin/login"><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/operator" element={<ProtectedRoute allowedRoles={['operator']} fallbackPath="/operator/login"><OperatorDashboard /></ProtectedRoute>} />
+          <Route path="/track/:rideId" element={<TrackingPage />} />
         </Routes>
       </div>
     </BrowserRouter>

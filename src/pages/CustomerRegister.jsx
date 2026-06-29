@@ -6,12 +6,13 @@ import { supabase } from '../lib/supabase';
 export default function CustomerRegister() {
   const navigate = useNavigate();
   const [idFile, setIdFile] = useState(null);
+  const [selfieFile, setSelfieFile] = useState(null);
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [acceptLegal, setAcceptLegal] = useState(false);
 
-  const [formData, setFormData] = useState({ name: '', phone: '', password: '' });
+  const [formData, setFormData] = useState({ name: '', phone: '', password: '', idType: 'national_id', idNumber: '' });
 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
@@ -23,6 +24,10 @@ export default function CustomerRegister() {
     e.preventDefault();
     if (!idFile) {
       alert("Please upload a valid ID.");
+      return;
+    }
+    if (!selfieFile) {
+      alert("Please upload a selfie for face verification.");
       return;
     }
     if (!acceptLegal) {
@@ -118,7 +123,25 @@ export default function CustomerRegister() {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Upload 1 Valid ID</label>
+            <label className="form-label">ID Type</label>
+            <select className="form-input" value={formData.idType} onChange={e => setFormData({...formData, idType: e.target.value})}>
+              <option value="national_id">National ID</option>
+              <option value="passport">Passport</option>
+              <option value="drivers_license">Driver's License</option>
+              <option value="student_id">Student ID</option>
+              <option value="postal_id">Postal ID</option>
+              <option value="voters_id">Voter's ID</option>
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">ID Number</label>
+            <input type="text" className="form-input" placeholder="Enter ID number" required 
+                   value={formData.idNumber} onChange={e => setFormData({...formData, idNumber: e.target.value})} />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Upload Valid ID Photo</label>
             <label className={`file-upload ${idFile ? 'has-file' : ''}`}>
               <UploadCloud className="file-upload-icon" size={32} />
               <span style={{ fontWeight: '500', marginBottom: '0.5rem' }}>
@@ -128,6 +151,24 @@ export default function CustomerRegister() {
                 PNG, JPG up to 5MB
               </span>
               <input type="file" accept="image/*" className="form-input" onChange={handleFileChange} />
+            </label>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Face Verification (Selfie)</label>
+            <label className={`file-upload ${selfieFile ? 'has-file' : ''}`}>
+              <UploadCloud className="file-upload-icon" size={32} />
+              <span style={{ fontWeight: '500', marginBottom: '0.5rem' }}>
+                {selfieFile ? selfieFile.name : 'Tap to upload Selfie'}
+              </span>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                Please take a clear photo of your face
+              </span>
+              <input type="file" accept="image/*" capture="user" className="form-input" onChange={(e) => {
+                 if (e.target.files && e.target.files[0]) {
+                   setSelfieFile(e.target.files[0]);
+                 }
+              }} />
             </label>
           </div>
 

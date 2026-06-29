@@ -4,17 +4,23 @@ import "leaflet-routing-machine";
 import "leaflet-routing-machine/dist/leaflet-routing-machine.css";
 import { useMap } from "react-leaflet";
 
-export default function RoutingMachine({ start, end, onRouteFound }) {
+export default function RoutingMachine({ start, end, waypoints, onRouteFound }) {
   const map = useMap();
 
   useEffect(() => {
-    if (!map || !start || !end) return;
+    let pts = [];
+    if (waypoints && waypoints.length >= 2) {
+      pts = waypoints;
+    } else if (start && end) {
+      pts = [start, end];
+    } else {
+      return;
+    }
+
+    if (!map) return;
 
     const routingControl = L.Routing.control({
-      waypoints: [
-        L.latLng(start[0], start[1]),
-        L.latLng(end[0], end[1])
-      ],
+      waypoints: pts.map(wp => L.latLng(wp[0], wp[1])),
       routeWhileDragging: false,
       showAlternatives: false,
       fitSelectedRoutes: true,
@@ -32,7 +38,7 @@ export default function RoutingMachine({ start, end, onRouteFound }) {
     });
 
     return () => map.removeControl(routingControl);
-  }, [map, start, end]);
+  }, [map, start, end, waypoints]);
 
   return null;
 }
