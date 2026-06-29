@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { Search, MapPin, Navigation2, Clock, User, Wallet, History, X, PlusCircle, Star, MessageSquare, ChevronLeft, ArrowRight, ShieldAlert, Share2, Sparkles, Info, TrendingUp, Bot, Scan, Send, Receipt, ShoppingCart, Shield, ShieldCheck, Mic, Lock, Users, Flame, Trophy } from 'lucide-react';
+import { Search, MapPin, Navigation2, Clock, User, Wallet, History, X, PlusCircle, Star, MessageSquare, ChevronLeft, ArrowLeft, ArrowRight, ShieldAlert, Share2, Sparkles, Info, TrendingUp, Bot, Scan, Send, Receipt, ShoppingCart, Shield, ShieldCheck, Mic, Lock, Users, Flame, Trophy, Home, Package, Utensils, ShoppingBag, Bell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import RoutingMachine from '../components/RoutingMachine';
 import { useAppStore } from '../store/useAppStore';
@@ -89,7 +89,7 @@ export default function CustomerDashboard() {
   const navigate = useNavigate();
   
   // UI Flow State
-  const [uiState, setUiState] = useState('idle'); // idle -> searching -> preview -> finding -> booked
+  const [uiState, setUiState] = useState('home'); // home -> idle (map) -> searching -> preview -> finding -> booked
   
   // Location States
   const [position, setPosition] = useState([15.7909, 120.9859]); // Default / GPS
@@ -268,6 +268,19 @@ export default function CustomerDashboard() {
     };
     fetchLocation();
   }, []);
+
+  // RideSafe Pay States
+  const [showP2P, setShowP2P] = useState(false);
+  const [p2pTarget, setP2pTarget] = useState('');
+  const [p2pAmount, setP2pAmount] = useState('');
+
+  const [showQRScan, setShowQRScan] = useState(false);
+  const [qrAmount, setQrAmount] = useState('');
+
+  const [showPayBills, setShowPayBills] = useState(false);
+  const [selectedBiller, setSelectedBiller] = useState('meralco');
+  const [billerAcct, setBillerAcct] = useState('');
+  const [billerAmount, setBillerAmount] = useState('');
 
   // Location Autocomplete Effect
   useEffect(() => {
@@ -666,12 +679,149 @@ export default function CustomerDashboard() {
         </div>
       )}
 
-      {/* Top Bar (Hidden during search) */}
-      {uiState !== 'searching' && (
+      {/* Dashboard Home Screen */}
+      {uiState === 'home' && (
+         <div className="absolute inset-0 bg-bg-color z-[2000] flex flex-col animate-fade-in pb-20 overflow-y-auto">
+            {/* Top Emerald Header */}
+            <div className="bg-primary pt-12 pb-24 px-4 text-white rounded-b-[40px] relative shadow-lg">
+               <div className="flex justify-between items-center relative z-10">
+                  <div className="flex items-center gap-2">
+                     <Shield size={28} className="text-white" />
+                     <h2 className="m-0 text-white font-black tracking-tight text-2xl">RideSafe</h2>
+                  </div>
+                  <div className="flex gap-4">
+                     <div className="relative cursor-pointer" onClick={() => setShowRewards(true)}>
+                        <Star size={24} fill="currentColor" className="text-yellow-300" />
+                        <span className="absolute -top-1 -right-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{safePoints}</span>
+                     </div>
+                     <User size={24} className="cursor-pointer" onClick={() => setShowProfile(true)} />
+                  </div>
+               </div>
+            </div>
+
+            {/* Floating Wallet Card */}
+            <div className="px-4 -mt-16 relative z-20 mb-6">
+               <div className="glass-card bg-white p-5 rounded-3xl flex justify-between items-center shadow-lg border border-gray-100">
+                  <div className="flex items-center gap-3">
+                     <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center text-primary">
+                        <Wallet size={24} />
+                     </div>
+                     <div>
+                        <div className="text-xs text-muted font-bold uppercase mb-1">RideSafe Pay</div>
+                        <div className="text-xl font-black text-gray-800">₱ {walletBalance.toFixed(2)}</div>
+                     </div>
+                  </div>
+                  <button className="btn btn-primary py-2 px-4 rounded-full text-sm shadow-md" onClick={() => setShowWallet(true)}>
+                     Top Up
+                  </button>
+               </div>
+            </div>
+
+            {/* Services Grid */}
+            <div className="px-4 mb-6">
+               <div className="grid grid-cols-4 gap-y-6 gap-x-2">
+                  <div className="flex flex-col items-center gap-2 cursor-pointer transition-transform hover:scale-105" onClick={() => { setServiceType('ride'); setUiState('idle'); }}>
+                     <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 shadow-sm border border-blue-100 relative">
+                        <img src="https://cdn-icons-png.flaticon.com/512/1048/1048314.png" className="w-10 h-10" />
+                        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">HOT</span>
+                     </div>
+                     <span className="text-xs font-bold text-gray-700">MC Taxi</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-2 cursor-pointer transition-transform hover:scale-105" onClick={() => { setServiceType('ride'); setUiState('idle'); }}>
+                     <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 shadow-sm border border-indigo-100">
+                        <img src="https://cdn-icons-png.flaticon.com/512/3204/3204121.png" className="w-10 h-10" />
+                     </div>
+                     <span className="text-xs font-bold text-gray-700">Car</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-2 cursor-pointer transition-transform hover:scale-105" onClick={() => { setServiceType('pool'); setUiState('idle'); }}>
+                     <div className="w-16 h-16 bg-green-50 rounded-2xl flex items-center justify-center text-green-600 shadow-sm border border-green-100">
+                        <Users size={28} />
+                     </div>
+                     <span className="text-xs font-bold text-gray-700">Pool</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-2 cursor-pointer transition-transform hover:scale-105" onClick={() => { setServiceType('express'); setUiState('idle'); }}>
+                     <div className="w-16 h-16 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-600 shadow-sm border border-orange-100 relative">
+                        <Package size={28} />
+                     </div>
+                     <span className="text-xs font-bold text-gray-700">Delivery</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-2 cursor-pointer transition-transform hover:scale-105" onClick={() => { setServiceType('food'); setUiState('idle'); }}>
+                     <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center text-red-600 shadow-sm border border-red-100">
+                        <Utensils size={28} />
+                     </div>
+                     <span className="text-xs font-bold text-gray-700">Food</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-2 cursor-pointer transition-transform hover:scale-105" onClick={() => { setServiceType('mart'); setUiState('idle'); }}>
+                     <div className="w-16 h-16 bg-teal-50 rounded-2xl flex items-center justify-center text-teal-600 shadow-sm border border-teal-100">
+                        <ShoppingCart size={28} />
+                     </div>
+                     <span className="text-xs font-bold text-gray-700">Mart</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-2 cursor-pointer transition-transform hover:scale-105" onClick={() => { setServiceType('pabili'); setUiState('idle'); }}>
+                     <div className="w-16 h-16 bg-purple-50 rounded-2xl flex items-center justify-center text-purple-600 shadow-sm border border-purple-100">
+                        <ShoppingBag size={28} />
+                     </div>
+                     <span className="text-xs font-bold text-gray-700">Pabili</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-2 cursor-pointer transition-transform hover:scale-105" onClick={() => setShowPlus(true)}>
+                     <div className="w-16 h-16 bg-yellow-50 rounded-2xl flex items-center justify-center text-yellow-600 shadow-sm border border-yellow-100 relative">
+                        <Sparkles size={28} />
+                        <span className="absolute -top-2 -right-2 bg-green-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">NEW</span>
+                     </div>
+                     <span className="text-xs font-bold text-gray-700">More</span>
+                  </div>
+               </div>
+            </div>
+
+            {/* Promo Carousel */}
+            <div className="px-4 mb-8">
+               <h3 className="text-lg font-bold mb-3 text-gray-800">Exclusive Promos</h3>
+               <div className="flex gap-3 overflow-x-auto pb-4" style={{ scrollbarWidth: 'none' }}>
+                  <div className="min-w-[280px] h-40 bg-gradient-to-r from-primary to-green-400 rounded-3xl p-5 text-white shadow-md relative overflow-hidden flex flex-col justify-center">
+                     <div className="absolute right-0 bottom-0 opacity-20"><Shield size={120} className="-mr-4 -mb-4"/></div>
+                     <h2 className="text-2xl font-black m-0 mb-1 relative z-10">50% OFF</h2>
+                     <p className="text-sm opacity-90 m-0 mb-3 relative z-10">Your first Carpool match!</p>
+                     <button className="bg-white text-primary font-bold py-2 px-4 rounded-full text-xs w-max relative z-10 shadow-sm" onClick={() => { setServiceType('pool'); setUiState('idle'); }}>BOOK NOW</button>
+                  </div>
+                  <div className="min-w-[280px] h-40 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl p-5 text-white shadow-md relative overflow-hidden flex flex-col justify-center">
+                     <div className="absolute right-0 bottom-0 opacity-20"><Wallet size={120} className="-mr-4 -mb-4"/></div>
+                     <h2 className="text-2xl font-black m-0 mb-1 relative z-10">0% FEES</h2>
+                     <p className="text-sm opacity-90 m-0 mb-3 relative z-10">Pay Meralco via RideSafe Pay</p>
+                     <button className="bg-white text-blue-600 font-bold py-2 px-4 rounded-full text-xs w-max relative z-10 shadow-sm" onClick={() => setShowWallet(true)}>PAY BILLS</button>
+                  </div>
+               </div>
+            </div>
+         </div>
+      )}
+
+      {/* Fixed Bottom Navigation (Dashboard only) */}
+      {uiState === 'home' && (
+         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-6 py-3 flex justify-between items-center z-[2500] shadow-[0_-4px_20px_rgba(0,0,0,0.05)] pb-6">
+            <div className="flex flex-col items-center gap-1 text-primary cursor-pointer">
+               <Home size={24} fill="currentColor" />
+               <span className="text-[10px] font-bold">Home</span>
+            </div>
+            <div className="flex flex-col items-center gap-1 text-muted hover:text-primary cursor-pointer transition-colors" onClick={() => setShowHistory(true)}>
+               <History size={24} />
+               <span className="text-[10px] font-bold">Orders</span>
+            </div>
+            <div className="flex flex-col items-center gap-1 text-muted hover:text-primary cursor-pointer transition-colors" onClick={() => setShowWallet(true)}>
+               <Wallet size={24} />
+               <span className="text-[10px] font-bold">Wallet</span>
+            </div>
+            <div className="flex flex-col items-center gap-1 text-muted hover:text-primary cursor-pointer transition-colors" onClick={() => setShowProfile(true)}>
+               <User size={24} />
+               <span className="text-[10px] font-bold">Profile</span>
+            </div>
+         </div>
+      )}
+
+      {/* Top Bar (Map View) */}
+      {uiState !== 'searching' && uiState !== 'home' && (
         <div className="p-4" style={{ position: 'absolute', top: 0, width: '100%', zIndex: 1000, background: `linear-gradient(${isBusinessMode ? '#1e293b' : 'var(--bg-color)'}, transparent)` }}>
           <div className="flex justify-between items-center w-full mb-2">
-            <div className={`glass-card shadow-sm flex items-center justify-center p-2 rounded-full cursor-pointer ${isBusinessMode ? 'border-blue-500 border-2' : ''}`} style={{ padding: '0.5rem', borderRadius: '50%' }} onClick={() => setShowProfile(true)}>
-               <User size={20} className={isBusinessMode ? 'text-blue-500' : 'text-primary'}/>
+            <div className={`glass-card shadow-sm flex items-center justify-center p-2 rounded-full cursor-pointer bg-white text-gray-800`} style={{ padding: '0.5rem', borderRadius: '50%' }} onClick={() => setUiState('home')}>
+               <ArrowLeft size={20} />
             </div>
             <div className="flex items-center gap-2">
               <div className="glass-card flex items-center gap-1 cursor-pointer" style={{ padding: '0.5rem', borderRadius: '50%' }} onClick={() => setShowSafety(true)}>
@@ -757,15 +907,15 @@ export default function CustomerDashboard() {
         </MapContainer>
         )}
 
-        {/* Community FAB */}
-        {uiState === 'idle' && (
-           <button 
-             className="absolute bottom-6 right-4 z-[1000] bg-white text-primary p-4 rounded-full shadow-lg border-2 border-primary/20 hover:scale-105 transition-transform flex items-center justify-center"
-             onClick={() => setShowCommunity(true)}
-           >
-              <Users size={24} />
-           </button>
-        )}
+      {/* Community FAB (Only when on map view) */}
+      {uiState === 'idle' && (
+         <button 
+           className="absolute bottom-6 right-4 z-[1000] bg-white text-primary p-4 rounded-full shadow-lg border-2 border-primary/20 hover:scale-105 transition-transform flex items-center justify-center"
+           onClick={() => setShowCommunity(true)}
+         >
+            <Users size={24} />
+         </button>
+      )}
       </div>
 
       {/* Idle Bottom Sheet */}
@@ -775,11 +925,11 @@ export default function CustomerDashboard() {
             
             <div className="flex bg-surface-light p-1 rounded-xl mb-4 border border-gray-100 shadow-sm overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
                <button className={`flex-1 min-w-[70px] py-2 rounded-lg font-bold transition-all ${serviceType === 'ride' ? 'bg-primary text-white shadow-sm' : 'text-muted'}`} onClick={() => setServiceType('ride')}>Ride</button>
-               <button className={`flex-1 min-w-[70px] py-2 rounded-lg font-bold transition-all ${serviceType === 'pool' ? 'bg-blue-500 text-white shadow-sm' : 'text-muted'}`} onClick={() => setServiceType('pool')}>Pool</button>
+               <button className={`flex-1 min-w-[70px] py-2 rounded-lg font-bold transition-all ${serviceType === 'pool' ? 'bg-green-500 text-white shadow-sm' : 'text-muted'}`} onClick={() => setServiceType('pool')}>Pool</button>
                <button className={`flex-1 min-w-[70px] py-2 rounded-lg font-bold transition-all ${serviceType === 'express' ? 'bg-orange-500 text-white shadow-sm' : 'text-muted'}`} onClick={() => setServiceType('express')}>Express</button>
                <button className={`flex-1 min-w-[70px] py-2 rounded-lg font-bold transition-all ${serviceType === 'food' ? 'bg-red-500 text-white shadow-sm' : 'text-muted'}`} onClick={() => setServiceType('food')}>Eats</button>
                <button className={`flex-1 min-w-[70px] py-2 rounded-lg font-bold transition-all ${serviceType === 'pabili' ? 'bg-purple-500 text-white shadow-sm' : 'text-muted'}`} onClick={() => setServiceType('pabili')}>Pabili</button>
-               <button className={`flex-1 min-w-[70px] py-2 rounded-lg font-bold transition-all ${serviceType === 'mart' ? 'bg-green-500 text-white shadow-sm' : 'text-muted'}`} onClick={() => setServiceType('mart')}>Mart</button>
+               <button className={`flex-1 min-w-[70px] py-2 rounded-lg font-bold transition-all ${serviceType === 'mart' ? 'bg-teal-500 text-white shadow-sm' : 'text-muted'}`} onClick={() => setServiceType('mart')}>Mart</button>
             </div>
 
             {serviceType === 'pabili' ? (
@@ -1300,64 +1450,152 @@ export default function CustomerDashboard() {
 
             {/* Quick Actions */}
             <div className="grid grid-cols-3 gap-3 mb-6">
-               <div className="flex flex-col items-center gap-2 p-3 bg-surface-light rounded-xl cursor-pointer shadow-sm border border-gray-100" onClick={() => {
-                  const merchant = prompt("Mock QR Scan: Enter Merchant Name (e.g. Jollibee)");
-                  if (merchant) {
-                     const amt = prompt(`Amount to pay ${merchant}?`);
-                     if (amt && parseFloat(amt) > 0 && parseFloat(amt) <= walletBalance) {
-                        addTransaction('payment', -parseFloat(amt), `Payment to ${merchant}`);
-                        supabase.from('profiles').update({ wallet_balance: walletBalance - parseFloat(amt) }).eq('id', currentUser.id).then(() => {
-                           useAppStore.getState().initialize();
-                           alert(`Successfully paid ₱${amt} to ${merchant}`);
-                        });
-                     } else if (amt) {
-                        alert(t('invalidAmount'));
-                     }
-                  }
-               }}>
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-primary"><Scan size={20} /></div>
-                  <span className="text-xs font-bold text-center">{t('scanToPay')}</span>
+               <div className="flex flex-col items-center gap-2 p-3 bg-surface-light rounded-xl cursor-pointer shadow-sm border border-gray-100 transition-transform hover:scale-105" onClick={() => setShowQRScan(true)}>
+                  <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center text-primary shadow-inner"><Scan size={24} /></div>
+                  <span className="text-xs font-bold text-center text-gray-700">{t('scanToPay')}</span>
                </div>
-               <div className="flex flex-col items-center gap-2 p-3 bg-surface-light rounded-xl cursor-pointer shadow-sm border border-gray-100" onClick={() => {
-                  const to = prompt(t('enterUsernamePhone'));
-                  if (to) {
-                     const amt = prompt(t('enterAmount', { to }));
-                     if (amt && parseFloat(amt) > 0 && parseFloat(amt) <= walletBalance) {
-                        addTransaction('transfer', -parseFloat(amt), `Transfer to ${to}`);
-                        supabase.from('profiles').update({ wallet_balance: walletBalance - parseFloat(amt) }).eq('id', currentUser.id).then(() => {
-                           useAppStore.getState().initialize();
-                           alert(t('successfullySent', { amt, to }));
-                        });
-                     } else if (amt) {
-                        alert(t('invalidAmount'));
-                     }
-                  }
-               }}>
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-green-600"><Send size={20} /></div>
-                  <span className="text-xs font-bold text-center">{t('sendMoney')}</span>
+               <div className="flex flex-col items-center gap-2 p-3 bg-surface-light rounded-xl cursor-pointer shadow-sm border border-gray-100 transition-transform hover:scale-105" onClick={() => setShowP2P(true)}>
+                  <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center text-green-600 shadow-inner"><Send size={24} /></div>
+                  <span className="text-xs font-bold text-center text-gray-700">{t('sendMoney')}</span>
                </div>
-               <div className="flex flex-col items-center gap-2 p-3 bg-surface-light rounded-xl cursor-pointer shadow-sm border border-gray-100" onClick={() => {
-                  const biller = prompt("Enter Biller Name (e.g. Meralco, Maynilad, Globe):");
-                  if (biller) {
-                     const acct = prompt("Enter Account Number:");
-                     if (acct) {
-                        const amt = prompt(`Amount to pay ${biller}?`);
-                        if (amt && parseFloat(amt) > 0 && parseFloat(amt) <= walletBalance) {
-                           addTransaction('bills', -parseFloat(amt), `Bills: ${biller} - ${acct}`);
-                           supabase.from('profiles').update({ wallet_balance: walletBalance - parseFloat(amt) }).eq('id', currentUser.id).then(() => {
-                              useAppStore.getState().initialize();
-                              alert(`Successfully paid ₱${amt} to ${biller} for account ${acct}`);
-                           });
-                        } else if (amt) {
-                           alert(t('invalidAmount'));
-                        }
-                     }
-                  }
-               }}>
-                  <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center text-orange-600"><Receipt size={20} /></div>
-                  <span className="text-xs font-bold text-center">{t('payBills')}</span>
+               <div className="flex flex-col items-center gap-2 p-3 bg-surface-light rounded-xl cursor-pointer shadow-sm border border-gray-100 transition-transform hover:scale-105" onClick={() => setShowPayBills(true)}>
+                  <div className="w-14 h-14 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 shadow-inner"><Receipt size={24} /></div>
+                  <span className="text-xs font-bold text-center text-gray-700">{t('payBills')}</span>
                </div>
             </div>
+
+            {/* Sub-modals for RideSafe Pay */}
+            {showP2P && (
+               <div className="absolute inset-0 bg-white z-[4100] flex flex-col animate-fade-in" style={{ borderRadius: '1.5rem 1.5rem 0 0' }}>
+                  <div className="p-4 flex items-center gap-3 border-b border-gray-100">
+                     <ArrowRight className="transform rotate-180 cursor-pointer" onClick={() => setShowP2P(false)} />
+                     <h3 className="m-0 text-lg">Send Money</h3>
+                  </div>
+                  <div className="p-6 flex-1">
+                     <div className="mb-6">
+                        <label className="text-xs font-bold uppercase text-muted mb-1 block">Send To (Mobile Number)</label>
+                        <input type="tel" className="form-input text-lg py-3" placeholder="09XX XXX XXXX" value={p2pTarget} onChange={e => setP2pTarget(e.target.value)} />
+                     </div>
+                     <div className="mb-6">
+                        <label className="text-xs font-bold uppercase text-muted mb-1 block">Amount (₱)</label>
+                        <input type="number" className="form-input text-3xl font-black py-4 text-center text-primary" placeholder="0.00" value={p2pAmount} onChange={e => setP2pAmount(e.target.value)} />
+                        <div className="text-center text-xs text-muted mt-2">Available Balance: ₱{walletBalance.toFixed(2)}</div>
+                     </div>
+                     <button className="btn btn-primary btn-block py-4 text-lg mt-auto" onClick={() => {
+                        const amt = parseFloat(p2pAmount);
+                        if (!p2pTarget || p2pTarget.length < 10) return alert("Enter a valid mobile number.");
+                        if (amt > 0 && amt <= walletBalance) {
+                           addTransaction('transfer', -amt, `Transfer to ${p2pTarget}`);
+                           supabase.from('profiles').update({ wallet_balance: walletBalance - amt }).eq('id', currentUser.id).then(() => {
+                              useAppStore.setState({ walletBalance: walletBalance - amt });
+                              alert(`₱${amt} sent to ${p2pTarget} successfully!`);
+                              setShowP2P(false);
+                              setP2pAmount('');
+                              setP2pTarget('');
+                           });
+                        } else {
+                           alert("Invalid amount or insufficient balance.");
+                        }
+                     }}>Send Instantly</button>
+                  </div>
+               </div>
+            )}
+
+            {showQRScan && (
+               <div className="absolute inset-0 bg-gray-900 z-[4100] flex flex-col animate-fade-in text-white" style={{ borderRadius: '1.5rem 1.5rem 0 0' }}>
+                  <div className="p-4 flex items-center gap-3">
+                     <X className="cursor-pointer" onClick={() => setShowQRScan(false)} />
+                     <h3 className="m-0 text-lg text-white">Scan to Pay</h3>
+                  </div>
+                  <div className="flex-1 flex flex-col items-center justify-center p-6">
+                     {/* Mock Camera Viewfinder */}
+                     <div className="w-64 h-64 border-2 border-white/50 rounded-3xl relative mb-8 overflow-hidden">
+                        <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-primary rounded-tl-xl"></div>
+                        <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-primary rounded-tr-xl"></div>
+                        <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-primary rounded-bl-xl"></div>
+                        <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-primary rounded-br-xl"></div>
+                        <div className="absolute inset-0 bg-primary/20 animate-pulse"></div>
+                        <div className="absolute top-1/2 left-0 w-full h-0.5 bg-primary shadow-[0_0_10px_rgba(59,130,246,1)] animate-[scan_2s_ease-in-out_infinite]"></div>
+                     </div>
+                     <p className="text-gray-300 text-center mb-6">Align QR Code within the frame to pay</p>
+                     
+                     <button className="btn btn-outline border-white text-white btn-block py-3" onClick={() => {
+                        const merchant = prompt("Mock QR Scan: Enter Merchant Name (e.g. Jollibee)");
+                        if (merchant) {
+                           const amt = prompt(`Amount to pay ${merchant}?`);
+                           if (amt && parseFloat(amt) > 0 && parseFloat(amt) <= walletBalance) {
+                              addTransaction('payment', -parseFloat(amt), `Payment to ${merchant}`);
+                              supabase.from('profiles').update({ wallet_balance: walletBalance - parseFloat(amt) }).eq('id', currentUser.id).then(() => {
+                                 useAppStore.setState({ walletBalance: walletBalance - parseFloat(amt) });
+                                 alert(`Successfully paid ₱${amt} to ${merchant}`);
+                                 setShowQRScan(false);
+                              });
+                           } else {
+                              alert("Invalid amount.");
+                           }
+                        }
+                     }}>Simulate Successful Scan</button>
+                  </div>
+               </div>
+            )}
+
+            {showPayBills && (
+               <div className="absolute inset-0 bg-gray-50 z-[4100] flex flex-col animate-fade-in" style={{ borderRadius: '1.5rem 1.5rem 0 0' }}>
+                  <div className="p-4 flex items-center gap-3 bg-white border-b border-gray-200">
+                     <ArrowRight className="transform rotate-180 cursor-pointer" onClick={() => setShowPayBills(false)} />
+                     <h3 className="m-0 text-lg">Pay Bills</h3>
+                  </div>
+                  <div className="p-6 flex-1 overflow-y-auto">
+                     <div className="mb-4">
+                        <label className="text-xs font-bold uppercase text-muted mb-2 block">Select Biller</label>
+                        <div className="grid grid-cols-2 gap-2">
+                           <div className={`p-3 border rounded-xl flex flex-col items-center gap-2 cursor-pointer transition-all ${selectedBiller === 'meralco' ? 'border-primary bg-primary/5 text-primary' : 'border-gray-200 bg-white'}`} onClick={() => setSelectedBiller('meralco')}>
+                              <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 font-black text-xl">M</div>
+                              <span className="text-xs font-bold">Meralco</span>
+                           </div>
+                           <div className={`p-3 border rounded-xl flex flex-col items-center gap-2 cursor-pointer transition-all ${selectedBiller === 'maynilad' ? 'border-primary bg-primary/5 text-primary' : 'border-gray-200 bg-white'}`} onClick={() => setSelectedBiller('maynilad')}>
+                              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-black text-xl">W</div>
+                              <span className="text-xs font-bold">Maynilad</span>
+                           </div>
+                           <div className={`p-3 border rounded-xl flex flex-col items-center gap-2 cursor-pointer transition-all ${selectedBiller === 'globe' ? 'border-primary bg-primary/5 text-primary' : 'border-gray-200 bg-white'}`} onClick={() => setSelectedBiller('globe')}>
+                              <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-black text-xl">G</div>
+                              <span className="text-xs font-bold">Globe</span>
+                           </div>
+                           <div className={`p-3 border rounded-xl flex flex-col items-center gap-2 cursor-pointer transition-all ${selectedBiller === 'smart' ? 'border-primary bg-primary/5 text-primary' : 'border-gray-200 bg-white'}`} onClick={() => setSelectedBiller('smart')}>
+                              <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center text-white font-black text-xl">S</div>
+                              <span className="text-xs font-bold">Smart</span>
+                           </div>
+                        </div>
+                     </div>
+                     <div className="mb-4">
+                        <label className="text-xs font-bold uppercase text-muted mb-1 block">Account Number</label>
+                        <input type="text" className="form-input py-3" placeholder="Enter 10-digit account No." value={billerAcct} onChange={e => setBillerAcct(e.target.value)} />
+                     </div>
+                     <div className="mb-6">
+                        <label className="text-xs font-bold uppercase text-muted mb-1 block">Amount (₱)</label>
+                        <input type="number" className="form-input text-2xl font-black py-3 text-primary" placeholder="0.00" value={billerAmount} onChange={e => setBillerAmount(e.target.value)} />
+                        <div className="text-right text-xs text-muted mt-1">Fee: ₱15.00</div>
+                     </div>
+                     <button className="btn btn-primary btn-block py-4" onClick={() => {
+                        const amt = parseFloat(billerAmount);
+                        const total = amt + 15; // 15 fee
+                        if (!billerAcct) return alert("Enter account number.");
+                        if (total > 0 && total <= walletBalance) {
+                           addTransaction('bills', -total, `Bills: ${selectedBiller.toUpperCase()} - ${billerAcct}`);
+                           supabase.from('profiles').update({ wallet_balance: walletBalance - total }).eq('id', currentUser.id).then(() => {
+                              useAppStore.setState({ walletBalance: walletBalance - total });
+                              alert(`₱${total.toFixed(2)} paid to ${selectedBiller.toUpperCase()} successfully! (Includes ₱15 fee)`);
+                              setShowPayBills(false);
+                              setBillerAmount('');
+                              setBillerAcct('');
+                           });
+                        } else {
+                           alert("Invalid amount or insufficient balance.");
+                        }
+                     }}>Pay ₱{billerAmount ? (parseFloat(billerAmount) + 15).toFixed(2) : '0.00'}</button>
+                  </div>
+               </div>
+            )}
 
             <h4 className="mb-3 text-secondary">{t('transactionHistory')}</h4>
             {transactions.length === 0 ? (
@@ -1397,12 +1635,33 @@ export default function CustomerDashboard() {
             
             <div className="flex-1 overflow-y-auto p-4 bg-surface-color">
               <div className="text-center mb-6">
-                 <h1 className="text-5xl font-black text-yellow-500 m-0 drop-shadow-sm">{safePoints}</h1>
-                 <span className="text-muted text-sm font-bold uppercase tracking-widest">{t('availablePoints')}</span>
+                 <h1 className="text-5xl font-black text-yellow-500 m-0 drop-shadow-sm flex items-center justify-center gap-2"><Star fill="currentColor"/> {safePoints}</h1>
+                 <span className="text-muted text-sm font-bold uppercase tracking-widest">{t('availablePoints')} (SafeCoins)</span>
+              </div>
+
+              {/* Tier Progress */}
+              <div className="bg-surface-light rounded-2xl p-5 mb-6 border border-yellow-300 shadow-sm relative overflow-hidden">
+                 <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400 opacity-10 rounded-full -mr-10 -mt-10 blur-xl"></div>
+                 <div className="flex justify-between items-end mb-2 relative z-10">
+                    <div>
+                       <div className="text-xs font-bold text-muted uppercase tracking-wider mb-1">Current Tier</div>
+                       <h3 className="m-0 text-yellow-600 font-black text-2xl drop-shadow-sm">GOLD MEMBER</h3>
+                    </div>
+                    <div className="text-right">
+                       <div className="text-sm font-bold">{safePoints} / 5000</div>
+                       <div className="text-xs text-muted">to Platinum</div>
+                    </div>
+                 </div>
+                 <div className="w-full bg-gray-200 rounded-full h-3 relative z-10 shadow-inner overflow-hidden">
+                    <div className="bg-gradient-to-r from-yellow-400 to-yellow-600 h-3 rounded-full" style={{ width: `${(safePoints / 5000) * 100}%` }}></div>
+                 </div>
+                 <div className="mt-3 text-xs text-yellow-700 font-semibold flex items-center gap-1 relative z-10">
+                    <CheckCircle size={14} /> You are earning 2x SafeCoins per ride!
+                 </div>
               </div>
 
               {/* Daily Streak */}
-              <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl p-4 mb-6 text-white shadow-lg flex items-center justify-between">
+              <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl p-4 mb-6 text-white shadow-lg flex items-center justify-between transition-transform hover:scale-105">
                  <div className="flex items-center gap-3">
                     <div className="bg-white/20 p-2 rounded-full backdrop-blur-md">
                        <Flame size={24} fill="currentColor" className="text-yellow-300" />

@@ -16,14 +16,15 @@ import ProtectedRoute from './components/ProtectedRoute';
 
 import { useAppStore } from './store/useAppStore';
 
-function App() {
-  React.useEffect(() => {
-    useAppStore.getState().initialize();
-  }, []);
+import { useLocation } from 'react-router-dom';
+
+function AppLayout() {
+  const location = useLocation();
+  const fullScreenRoutes = ['/', '/login', '/register-customer', '/register-driver', '/admin/login', '/operator/login'];
+  const isFullScreen = fullScreenRoutes.includes(location.pathname);
 
   return (
-    <BrowserRouter>
-      <div className="app-container">
+    <div className={isFullScreen ? "w-full min-h-screen" : "app-container"}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
@@ -39,7 +40,18 @@ function App() {
           <Route path="/operator" element={<ProtectedRoute allowedRoles={['operator']} fallbackPath="/operator/login"><OperatorDashboard /></ProtectedRoute>} />
           <Route path="/track/:rideId" element={<TrackingPage />} />
         </Routes>
-      </div>
+    </div>
+  );
+}
+
+function App() {
+  React.useEffect(() => {
+    useAppStore.getState().initialize();
+  }, []);
+
+  return (
+    <BrowserRouter>
+      <AppLayout />
     </BrowserRouter>
   );
 }
