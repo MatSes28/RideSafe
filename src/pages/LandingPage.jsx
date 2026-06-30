@@ -102,16 +102,16 @@ export default function LandingPage() {
       </div>
 
       {/* MOBILE VIEW / DESKTOP RIGHT SECTION (Interactive Onboarding Pane) */}
-      <div className="w-full min-h-screen lg:h-screen lg:col-span-5 xl:col-span-4 bg-[#0B0F19] relative flex flex-col shadow-[-20px_0_50px_rgba(0,0,0,0.5)] z-20 overflow-y-auto overflow-x-hidden">
+      <div className="w-full min-h-screen lg:h-screen lg:col-span-5 xl:col-span-4 bg-slate-50 relative flex flex-col shadow-[-20px_0_50px_rgba(0,0,0,0.1)] z-20 overflow-y-auto overflow-x-hidden">
          
          {/* Ambient Glow */}
-         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-[radial-gradient(circle,_rgba(0,168,107,0.12)_0%,_transparent_70%)] pointer-events-none z-0"></div>
+         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-[radial-gradient(circle,_rgba(14,165,233,0.15)_0%,_transparent_70%)] pointer-events-none z-0"></div>
 
          {/* Mobile Logo Header */}
          <div className="lg:hidden shrink-0 pt-8 pb-4 px-8 flex justify-center z-50">
-           <div className="flex items-center gap-2 bg-[#0F172A]/80 backdrop-blur-xl px-5 py-2 rounded-full border border-white/10 shadow-lg">
+           <div className="flex items-center gap-2 bg-white/80 backdrop-blur-xl px-5 py-2 rounded-full border border-slate-200 shadow-sm">
              <img src={logo} alt="RideSafe Logo" className="w-6 h-6 object-contain" />
-             <span className="text-white font-extrabold text-lg tracking-tight">RideSafe</span>
+             <span className="text-slate-900 font-extrabold text-lg tracking-tight">RideSafe</span>
            </div>
          </div>
 
@@ -130,15 +130,15 @@ export default function LandingPage() {
                  <div key={index} className="min-w-full h-full flex flex-col items-center justify-center px-10 text-center pb-12">
                    
                    {/* Explicit bounding container for icon to prevent layout explosion */}
-                   <div className="w-28 h-28 flex items-center justify-center mb-8 bg-[#0ea5e9]/10 rounded-full border border-[#0ea5e9]/20 shadow-[inset_0_0_20px_rgba(0,168,107,0.2)]">
+                   <div className="w-28 h-28 flex items-center justify-center mb-8 bg-[#0ea5e9]/10 rounded-full border border-[#0ea5e9]/20 shadow-[inset_0_0_20px_rgba(14,165,233,0.2)]">
                       {slide.icon}
                    </div>
                    
-                   <h2 className="text-white text-3xl font-extrabold mb-4 leading-tight tracking-tight">
+                   <h2 className="text-slate-900 text-3xl font-extrabold mb-4 leading-tight tracking-tight">
                      {slide.title}
                    </h2>
                    
-                   <p className="text-[#94A3B8] text-[1.05rem] leading-relaxed font-medium max-w-[320px]">
+                   <p className="text-slate-600 text-[1.05rem] leading-relaxed font-medium max-w-[320px]">
                      {slide.description}
                    </p>
                  </div>
@@ -151,22 +151,22 @@ export default function LandingPage() {
                 <div 
                   key={i} 
                   onClick={() => setCurrentSlide(i)}
-                  className={`rounded-full cursor-pointer transition-all duration-300 ${currentSlide === i ? 'w-8 h-2 bg-[#0ea5e9]' : 'w-2 h-2 bg-white/20 hover:bg-white/40'}`}
+                  className={`rounded-full cursor-pointer transition-all duration-300 ${currentSlide === i ? 'w-8 h-2 bg-[#0ea5e9]' : 'w-2 h-2 bg-slate-300 hover:bg-slate-400'}`}
                 />
               ))}
             </div>
          </div>
 
          {/* Fixed Premium Bottom Actions (Bounded, Never Collapses, Always Visible) */}
-         <div className="shrink-0 w-full bg-[#0F172A] p-6 pb-8 border-t border-white/5 shadow-[0_-20px_40px_rgba(0,0,0,0.5)] z-50 flex flex-col gap-4">
+         <div className="shrink-0 w-full bg-white p-6 pb-8 border-t border-slate-200 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] z-50 flex flex-col gap-4">
             <button 
-              className="w-full bg-[#0ea5e9] text-white rounded-full py-4 font-bold text-lg shadow-[0_4px_14px_rgba(0,168,107,0.3)] transition-transform duration-200 active:scale-[0.98] hover:shadow-[0_6px_20px_rgba(0,168,107,0.4)] flex justify-center items-center"
+              className="w-full bg-[#0ea5e9] text-white rounded-full py-4 font-bold text-lg shadow-[0_4px_14px_rgba(14,165,233,0.3)] transition-transform duration-200 active:scale-[0.98] hover:shadow-[0_6px_20px_rgba(14,165,233,0.4)] flex justify-center items-center"
               onClick={() => navigate('/login')}
             >
               Login to Book
             </button>
             <button 
-              className="w-full bg-transparent text-[#0ea5e9] border-2 border-[#0ea5e9]/80 rounded-full py-4 font-bold text-lg transition-all duration-200 active:scale-[0.98] hover:bg-[#0ea5e9]/10 flex justify-center items-center"
+              className="w-full bg-transparent text-[#0ea5e9] border-2 border-[#0ea5e9] rounded-full py-4 font-bold text-lg transition-all duration-200 active:scale-[0.98] hover:bg-[#0ea5e9]/10 flex justify-center items-center"
               onClick={() => navigate('/register-driver')}
             >
               Register to Drive
